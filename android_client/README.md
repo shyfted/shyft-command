@@ -112,6 +112,33 @@ To view logs:
 adb logcat | grep -i shyfted
 ```
 
+## GPIO Monitor
+
+Use the GPIO polling utility to watch exported input lines for state changes:
+
+```bash
+tools/petey_gpio_monitor.sh
+```
+
+Optional log file and range filtering are supported:
+
+```bash
+tools/petey_gpio_monitor.sh --range 118-135 --log-file /tmp/petey_gpio_monitor.log
+```
+
+## GPIO18 Proof of Concept
+
+The app now includes a lightweight GPIO18 presence monitor that starts with the
+main client and logs:
+
+- `Presence detected`
+- `Presence cleared`
+
+It also records transition counts in the app log when the activity shuts down.
+This is a proof of concept only; production GPIO event handling should move to
+the character-device GPIO interface or `libgpiod` once the signal path is fully
+confirmed.
+
 ## Current v0.1 Behavior
 
 - Package name: `au.com.shyfted.client`

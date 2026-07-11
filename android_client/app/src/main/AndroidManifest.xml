@@ -36,6 +36,9 @@
         <service
             android:name=".BatteryOverlayService"
             android:exported="false" />
+        <service
+            android:name=".Ld2410ProbeService"
+            android:exported="true" />
     </application>
 
 </manifest>

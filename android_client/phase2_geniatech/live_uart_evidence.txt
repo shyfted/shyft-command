@@ -1,0 +1,15 @@
+DEVICES
+serinfo:1.0 driver revision:
+1: uart:16550A mmio:0xFE650000 irq:56 tx:79676 rx:1140111 RTS|CTS|DTR
+3: uart:16550A mmio:0xFE670000 irq:57 tx:0 rx:0 CTS
+4: uart:16550A mmio:0xFE680000 irq:58 tx:0 rx:0 CTS
+FD_S3S4
+PID=983 ch.epc.launcher
+PID=1546 iatech.epc.core
+PID=1592 ech.epc.service
+PID=2133 hyfted.epdproof
+PID=11136 .shyfted.client
+SERVICES
+126	sensor_privacy: [android.hardware.ISensorPrivacyManager]
+127	sensorservice: [android.gui.SensorServer]
+128	serial: [android.hardware.ISerialManager]

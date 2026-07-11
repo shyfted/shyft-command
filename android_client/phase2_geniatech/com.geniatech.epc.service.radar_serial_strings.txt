@@ -1,0 +1,113 @@
+Serializable
+deserializer
+ EnumEntriesSerializationProxy.kt
+ Landroid/hardware/SensorManager;
+ Lcom/google/gson/JsonSerializer;
+ Lcom/google/gson/JsonSerializer<
+ enableComplexMapKeySerialization
+ is not a valid double value as per JSON specification. To override this behavior, use GsonBuilder.serializeSpecialFloatingPointValues() method.
+ sSerialExecutorForLocalesStorage
+!addSerializationExclusionStrategy
+"Lcom/google/gson/JsonDeserializer;
+"Lcom/google/gson/JsonDeserializer<
+"Ljava/io/NotSerializableException;
+"Lkotlin/jvm/JvmSerializableLambda;
+"Lkotlin/jvm/internal/SerializedIr;
+#addDeserializationExclusionStrategy
+#serializeSpecialFloatingPointValues
+%GSON cannot serialize or deserialize
+'SerializationDelegatingTypeAdapter.java
+(Attempted to serialize java.lang.Class:
+(Lkotlin/text/Regex$Serialized$Companion;
+)Lcom/google/gson/LongSerializationPolicy;
+)Lkotlin/random/Random$Default$Serialized;
+*Lcom/google/gson/JsonSerializationContext;
+*[Lcom/google/gson/LongSerializationPolicy;
++Lcom/google/gson/LongSerializationPolicy$1;
++Lcom/google/gson/LongSerializationPolicy$2;
++Lkotlin/collections/builders/SerializedMap;
++Serialization of this object is not allowed
+,Lcom/google/gson/JsonDeserializationContext;
+,Lcom/google/gson/annotations/SerializedName;
+,Lkotlin/enums/EnumEntriesSerializationProxy;
+.FlatBuffers: struct must be serialized inline.
+.Lkotlin/coroutines/CombinedContext$Serialized;
+2 must implement JsonSerializer or JsonDeserializer
+2Lkotlin/collections/builders/SerializedCollection;
+5FlatBuffers: object serialization must not be nested.
+5Lkotlin/collections/builders/SerializedMap$Companion;
+5The map cannot be serialized while it is being built.
+5The set cannot be serialized while it is being built.
+6Lkotlin/enums/EnumEntriesSerializationProxy$Companion;
+6The list cannot be serialized while it is being built.
+8Lkotlin/coroutines/CombinedContext$Serialized$Companion;
+;Can't serialize Icon created with IconCompat#createFromIcon
+<Lkotlin/collections/builders/SerializedCollection$Companion;
+?Landroidx/appcompat/app/AppLocalesStorageHelper$SerialExecutor;
+@SerializedName on
+ARC_QUARTER
+BLcom/google/gson/internal/bind/SerializationDelegatingTypeAdapter;
+BLcom/google/gson/internal/bind/SerializationDelegatingTypeAdapter<
+DEFAULT_SERIALIZE_NULLS
+Deserialization is unsupported
+JsonDeserializationContext.java
+JsonDeserializer.java
+JsonSerializationContext.java
+JsonSerializer.java
+Ljava/io/Serializable;
+Lkotlin/io/Serializable;
+Lkotlin/io/SerializableKt;
+Lkotlin/text/Regex$Serialized;
+LongSerializationPolicy.java
+Lorg/xmlpull/v1/XmlSerializer;
+Nlambda$execute$0$androidx-appcompat-app-AppLocalesStorageHelper$SerialExecutor
+PVersionedParcelable encountered IOException writing serializable object (name =
+RVersionedParcelable encountered IOException reading a Serializable object (name =
+SAttempted to deserialize a java.lang.Class. Forgot to register a type adapter?
+SerialExecutor
+Serializable$annotations
+Serializable.kt
+Serialized
+SerializedIr.kt
+SerializedName.java
+TRANSACTION_getSerialNumber
+TYPE_SERIALIZABLE
+YLandroidx/appcompat/app/AppLocalesStorageHelper$SerialExecutor$$ExternalSyntheticLambda0;
+]VersionedParcelable encountered ClassNotFoundException reading a Serializable object (name =
+access$getPresenceArray$p
+allowSerialization
+c. @JsonAdapter value must be a TypeAdapter, TypeAdapterFactory, JsonSerializer or JsonDeserializer.
+complexMapKeySerialization
+deserializationStrategies
+deserialize
+deserializeToDate
+deserializedFields
+disableInnerClassSerialization
+getSerialNumber
+getSerializationDelegate
+getSerializeNulls
+getprop ro.serialno
+kotlin/collections/builders/SerializedCollection
+kotlin/coroutines/CombinedContext$Serialized
+longSerializationPolicy
+newSerializer
+pFlatBuffers: you can only access the serialized buffer after it has been finished by FlatBufferBuilder.finish().
+presenceArray
+putSerializable
+readSerializable
+sensor
+serialVersionUID
+serializationStrategies
+serialize
+serializeInnerClasses
+serializeNulls
+serializedFields
+serializedName
+serializer
+setLongSerializationPolicy
+setSerializationFlags
+setSerializeNulls
+val$skipDeserialize
+val$skipSerialize
+writeSerializable
+{serializeNulls:

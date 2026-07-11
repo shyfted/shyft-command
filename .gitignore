@@ -15,3 +15,9 @@ latest.png
 # Local runtime/media state
 data/*.db-*
 products.json
+
+# Android/Petey generated investigation artifacts
+android_client/petey_*.txt
+android_client/phase2_geniatech/**/*.apk
+android_client/phase2_geniatech/*.dex
+android_client/phase2_geniatech/**/*.so

@@ -1,0 +1,9 @@
+/system/vendor/etc/media_profiles_V1_0.xml:109:                   bitRate="256000"
+/system/vendor/etc/media_profiles_V1_0.xml:300:                   bitRate="256000"
+/system/vendor/etc/media_profiles_V1_0.xml:317:                   bitRate="256000"
+/system/vendor/etc/media_profiles_V1_0.xml:406:                   bitRate="256000"
+/system/vendor/ueventd.rc:56:#/dev/ttyS3                0600   gps        gps
+/vendor/etc/media_profiles_V1_0.xml:109:                   bitRate="256000"
+/vendor/etc/media_profiles_V1_0.xml:300:                   bitRate="256000"
+/vendor/etc/media_profiles_V1_0.xml:317:                   bitRate="256000"
+/vendor/etc/media_profiles_V1_0.xml:406:                   bitRate="256000"

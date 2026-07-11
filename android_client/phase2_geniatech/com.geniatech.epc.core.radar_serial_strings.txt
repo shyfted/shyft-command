@@ -1,0 +1,54 @@
+Serializable
+ Landroid/hardware/SensorManager;
+ sSerialExecutorForLocalesStorage
+"Ljava/io/NotSerializableException;
+"Lkotlin/jvm/internal/SerializedIr;
+(Lkotlin/text/Regex$Serialized$Companion;
+)Lkotlin/random/Random$Default$Serialized;
++Lkotlin/collections/builders/SerializedMap;
++Serialization of this object is not allowed
+.FlatBuffers: struct must be serialized inline.
+.Lkotlin/coroutines/CombinedContext$Serialized;
+2Lkotlin/collections/builders/SerializedCollection;
+5FlatBuffers: object serialization must not be nested.
+5Lkotlin/collections/builders/SerializedMap$Companion;
+5The map cannot be serialized while it is being built.
+5The set cannot be serialized while it is being built.
+6The list cannot be serialized while it is being built.
+8Lkotlin/coroutines/CombinedContext$Serialized$Companion;
+;Can't serialize Icon created with IconCompat#createFromIcon
+<Lkotlin/collections/builders/SerializedCollection$Companion;
+?Landroidx/appcompat/app/AppLocalesStorageHelper$SerialExecutor;
+Ljava/io/Serializable;
+Lkotlin/io/Serializable;
+Lkotlin/io/SerializableKt;
+Lkotlin/text/Regex$Serialized;
+Lorg/xmlpull/v1/XmlSerializer;
+Nlambda$execute$0$androidx-appcompat-app-AppLocalesStorageHelper$SerialExecutor
+PVersionedParcelable encountered IOException writing serializable object (name =
+RVersionedParcelable encountered IOException reading a Serializable object (name =
+SerialExecutor
+Serializable$annotations
+Serializable.kt
+Serialized
+SerializedIr.kt
+TRANSACTION_getSerialNumber
+TYPE_SERIALIZABLE
+YLandroidx/appcompat/app/AppLocalesStorageHelper$SerialExecutor$$ExternalSyntheticLambda0;
+]VersionedParcelable encountered ClassNotFoundException reading a Serializable object (name =
+access$getPresenceArray$p
+allowSerialization
+getSerial
+getSerialNumber
+getSerializable
+kotlin/collections/builders/SerializedCollection
+kotlin/coroutines/CombinedContext$Serialized
+newSerializer
+pFlatBuffers: you can only access the serialized buffer after it has been finished by FlatBufferBuilder.finish().
+presenceArray
+putSerializable
+readSerializable
+sensor
+serialVersionUID
+setSerializationFlags
+writeSerializable

@@ -59,6 +59,7 @@ public final class MainActivity extends Activity {
     private DeviceConfig deviceConfig;
     private ShyftedDeviceClient deviceClient;
     private PeteyEinkServiceProbe peteyEinkServiceProbe;
+    private Gpio18PresenceMonitor gpio18PresenceMonitor;
     private boolean mainFrameLoadFailed;
     private boolean batteryPulseBright = true;
     private Integer lastBatteryPercent;
@@ -107,6 +108,7 @@ public final class MainActivity extends Activity {
                 this::sendEinkContent
         );
         peteyEinkServiceProbe = new PeteyEinkServiceProbe(this);
+        gpio18PresenceMonitor = new Gpio18PresenceMonitor();
         Log.i(ShyftedDeviceClient.TAG, "Loaded device config source=" + deviceConfig.source
                 + " deviceName=" + deviceConfig.deviceName
                 + " deviceId=" + deviceConfig.deviceId
@@ -159,6 +161,7 @@ public final class MainActivity extends Activity {
         refreshBatteryStateOnce();
         showLastGoodLcdContent();
         peteyEinkServiceProbe.start();
+        gpio18PresenceMonitor.start();
         handleEpdProbeIntent(getIntent());
         if (!isEpdProbeOnly(getIntent())) {
             deviceClient.start();
@@ -195,6 +198,10 @@ public final class MainActivity extends Activity {
         if (peteyEinkServiceProbe != null) {
             peteyEinkServiceProbe.stop();
             peteyEinkServiceProbe = null;
+        }
+        if (gpio18PresenceMonitor != null) {
+            gpio18PresenceMonitor.stop();
+            gpio18PresenceMonitor = null;
         }
         if (webView != null) {
             webView.destroy();
@@ -688,6 +695,10 @@ public final class MainActivity extends Activity {
         unregisterBatteryReceiver();
         if (deviceClient != null) {
             deviceClient.stop();
+        }
+        if (gpio18PresenceMonitor != null) {
+            gpio18PresenceMonitor.stop();
+            gpio18PresenceMonitor = null;
         }
         if (webView != null) {
             webView.onPause();
