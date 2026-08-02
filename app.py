@@ -21,6 +21,8 @@ app.secret_key = os.environ.get("AUTH_SESSION_SECRET") or os.environ.get("SECRET
 if not app.secret_key:
     raise RuntimeError("Set AUTH_SESSION_SECRET before starting the CMS.")
 
+APP_DISPLAY_NAME = "Shyft Command"
+APP_SHORT_NAME = "Command"
 STORAGE_DIR = os.environ.get("SHYFTED_STORAGE_DIR")
 if STORAGE_DIR:
     STORAGE_DIR = os.path.abspath(STORAGE_DIR)
@@ -371,12 +373,12 @@ def send_password_reset_email(user, token):
     reset_url = f"{APP_URL}{url_for('reset_password', token=token)}"
     body = (
         f"Hi {user['name']},\n\n"
-        "Use this link to reset your Shyfted CMS password. "
+        f"Use this link to reset your {APP_DISPLAY_NAME} password. "
         f"The link expires in {RESET_TOKEN_MINUTES} minutes:\n\n"
         f"{reset_url}\n\n"
         "If you did not request this, you can ignore this email."
     )
-    return send_email(user["email"], "Reset your Shyfted CMS password", body)
+    return send_email(user["email"], f"Reset your {APP_DISPLAY_NAME} password", body)
 
 
 def rate_limit_key(scope):
@@ -417,6 +419,8 @@ def generate_csrf_token():
 @app.context_processor
 def inject_auth_context():
     return {
+        "app_display_name": APP_DISPLAY_NAME,
+        "app_short_name": APP_SHORT_NAME,
         "csrf_token": generate_csrf_token,
         "current_user": current_user(),
         "window_session_storage_key": WINDOW_SESSION_STORAGE_KEY,

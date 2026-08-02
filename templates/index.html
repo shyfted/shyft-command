@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Shyfted CMS</title>
+<title>{{ app_display_name }}</title>
 
 <style>
 * { box-sizing:border-box; }
@@ -632,10 +632,10 @@ button:hover,
         <label class="hamburger" for="menuToggle" aria-label="Open menu"><span></span></label>
         <nav class="menu">
             <a class="{% if page == 'devices' %}active{% endif %}" href="{{ url_for('index') }}">Devices</a>
-            <a class="{% if page == 'media' %}active{% endif %}" href="{{ url_for('media') }}">Media</a>
+            <a class="{% if page == 'media' %}active{% endif %}" href="{{ url_for('media') }}">Content</a>
             <a class="{% if page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">Settings</a>
         </nav>
-        <h1>Shyfted CMS</h1>
+        <h1>{{ app_display_name }}</h1>
     </div>
 
     <div class="actions">
@@ -674,7 +674,7 @@ button:hover,
     <div class="section-head">
         <div>
             <h2>Settings</h2>
-            <div class="section-subtitle">Simple controls for this CMS.</div>
+            <div class="section-subtitle">Simple controls for {{ app_short_name }}.</div>
         </div>
     </div>
     <div class="placeholder">No settings are needed for this workflow.</div>
@@ -683,8 +683,8 @@ button:hover,
 <section>
     <div class="section-head">
         <div>
-            <h2>Media</h2>
-            <div class="section-subtitle">Uploaded media available for every device.</div>
+            <h2>Content</h2>
+            <div class="section-subtitle">Uploaded content available for every device.</div>
         </div>
     </div>
     <div class="media-grid">
@@ -708,7 +708,7 @@ button:hover,
             </form>
         </div>
         {% else %}
-        <div class="empty">No media has been uploaded yet.</div>
+        <div class="empty">No content has been uploaded yet.</div>
         {% endfor %}
     </div>
 </section>
@@ -726,7 +726,7 @@ button:hover,
             </div>
             <div class="device-actions">
                 <button class="secondary-action" type="button" onclick="openDevicePreview()">Preview</button>
-                <form action="{{ url_for('push_device', device_id=active_device.id) }}" method="POST" onsubmit="return confirm('PUSH selected media to {{ active_device.name }}?')">
+                <form action="{{ url_for('push_device', device_id=active_device.id) }}" method="POST" onsubmit="return confirm('PUSH selected content to {{ active_device.name }}?')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="push">PUSH</button>
                 </form>
@@ -777,7 +777,7 @@ button:hover,
                 </div>
             </div>
             {% else %}
-            <div class="empty">Upload media before selecting content for this device.</div>
+            <div class="empty">Upload content before selecting content for this device.</div>
             {% endfor %}
         </div>
     </div>
@@ -795,7 +795,7 @@ button:hover,
                     {% endif %}
                 </div>
                 <span class="live-label">LCD</span>
-                <p class="filename" title="{{ active_device.lcd.file or '' }}">{{ active_device.lcd.file or 'No media' }}</p>
+                <p class="filename" title="{{ active_device.lcd.file or '' }}">{{ active_device.lcd.file or 'No content' }}</p>
             </div>
             <div class="live-shot">
                 <div class="live-frame">
@@ -806,7 +806,7 @@ button:hover,
                     {% endif %}
                 </div>
                 <span class="live-label">E-Ink</span>
-                <p class="filename" title="{{ active_device.eink.file or '' }}">{{ active_device.eink.file or 'No media' }}</p>
+                <p class="filename" title="{{ active_device.eink.file or '' }}">{{ active_device.eink.file or 'No content' }}</p>
             </div>
         </div>
     </aside>
@@ -843,7 +843,7 @@ button:hover,
                         {% endif %}
                     </div>
                     <span class="live-label">LCD</span>
-                    <p class="filename" title="{{ device.lcd.file or '' }}">{{ device.lcd.file or 'No media' }}</p>
+                    <p class="filename" title="{{ device.lcd.file or '' }}">{{ device.lcd.file or 'No content' }}</p>
                 </div>
                 <div class="live-shot">
                     <div class="live-frame">
@@ -854,7 +854,7 @@ button:hover,
                         {% endif %}
                     </div>
                     <span class="live-label">E-Ink</span>
-                    <p class="filename" title="{{ device.eink.file or '' }}">{{ device.eink.file or 'No media' }}</p>
+                    <p class="filename" title="{{ device.eink.file or '' }}">{{ device.eink.file or 'No content' }}</p>
                 </div>
             </div>
         </a>
@@ -923,7 +923,7 @@ button:hover,
                             {% endif %}
                         </div>
                         <span class="device-preview-label">Live</span>
-                        <p class="filename" title="{{ active_device.lcd.file or '' }}">{{ active_device.lcd.file or 'No media' }}</p>
+                        <p class="filename" title="{{ active_device.lcd.file or '' }}">{{ active_device.lcd.file or 'No content' }}</p>
                     </div>
                     <div>
                         <div class="device-preview-frame">
@@ -934,7 +934,7 @@ button:hover,
                             {% endif %}
                         </div>
                         <span class="device-preview-label">Selected</span>
-                        <p class="filename" title="{{ active_device.selected_lcd.file or '' }}">{{ active_device.selected_lcd.file or 'No media' }}</p>
+                        <p class="filename" title="{{ active_device.selected_lcd.file or '' }}">{{ active_device.selected_lcd.file or 'No content' }}</p>
                     </div>
                 </div>
             </div>
@@ -951,7 +951,7 @@ button:hover,
                             {% endif %}
                         </div>
                         <span class="device-preview-label">Live</span>
-                        <p class="filename" title="{{ active_device.eink.file or '' }}">{{ active_device.eink.file or 'No media' }}</p>
+                        <p class="filename" title="{{ active_device.eink.file or '' }}">{{ active_device.eink.file or 'No content' }}</p>
                     </div>
                     <div>
                         <div class="device-preview-frame">
@@ -962,7 +962,7 @@ button:hover,
                             {% endif %}
                         </div>
                         <span class="device-preview-label">Selected</span>
-                        <p class="filename" title="{{ active_device.selected_eink.file or '' }}">{{ active_device.selected_eink.file or 'No media' }}</p>
+                        <p class="filename" title="{{ active_device.selected_eink.file or '' }}">{{ active_device.selected_eink.file or 'No content' }}</p>
                     </div>
                 </div>
             </div>

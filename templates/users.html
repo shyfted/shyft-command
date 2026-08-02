@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Users - Shyfted CMS</title>
+<title>Users - {{ app_display_name }}</title>
 <style>
 body { background:#10131a; color:#d7deea; font-family:"Space Grotesk","Avenir Next","Segoe UI",system-ui,sans-serif; padding:20px; }
 .topbar { align-items:center; display:flex; justify-content:space-between; margin-bottom:20px; }
@@ -33,7 +33,7 @@ form { margin:0; }
 <h1>Users</h1>
 <div class="actions">
 <a class="primary" href="{{ url_for('create_user_route') }}">Create user</a>
-<a class="secondary" href="{{ url_for('index') }}">Dashboard</a>
+<a class="secondary" href="{{ url_for('index') }}">Command Dashboard</a>
 </div>
 </div>
 
