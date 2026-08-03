@@ -1,6 +1,6 @@
-# Shyfted Client Android
+# ShyftTab Android Client
 
-Android-native Shyfted device client.
+Android-native ShyftTab device client.
 
 This is the Android equivalent starting point for `device_clients/device.py`. The current release is a branded Shyfted device shell that loads the configured CMS URL in a full-screen WebView. The source also includes small endpoint/device-spec classes so heartbeat, config polling, media download, caching, and renderer-specific behavior can be added without reshaping the app later.
 
@@ -18,8 +18,8 @@ No Google Play Services, Chrome, or external browser dependency is used.
 First-boot defaults:
 
 ```properties
-device.name=Petey
-device.id=petey_001
+device.name=ShyftTab
+device.id=shyfttab_001
 cms.url=https://cms.shyfted.com.au
 ```
 
@@ -41,8 +41,8 @@ Create or replace it over ADB:
 ```bash
 adb shell 'mkdir -p /sdcard/Android/data/au.com.shyfted.client/files'
 adb shell 'cat > /sdcard/Android/data/au.com.shyfted.client/files/shyfted-client.properties <<EOF
-device.name=Petey
-device.id=petey_001
+device.name=ShyftTab
+device.id=shyfttab_001
 cms.url=https://cms.shyfted.com.au
 EOF'
 ```
@@ -52,8 +52,8 @@ One-off launch overrides are also supported:
 ```bash
 adb shell am start \
   -n au.com.shyfted.client/.MainActivity \
-  --es device.name Petey \
-  --es device.id petey_001 \
+  --es device.name ShyftTab \
+  --es device.id shyfttab_001 \
   --es cms.url https://cms.shyfted.com.au
 ```
 
@@ -139,10 +139,38 @@ This is a proof of concept only; production GPIO event handling should move to
 the character-device GPIO interface or `libgpiod` once the signal path is fully
 confirmed.
 
+For longer GPIO18-only characterization runs, use the presence logger:
+
+```bash
+tools/petey_gpio18_presence_logger.sh --poll-ms 20 --idle-timeout 30
+```
+
+It logs raw GPIO18 transitions, interpreted presence state, active durations,
+and idle-timeout candidates without changing application or service behaviour.
+See `docs/gpio18_power_management_phase1.md` for the Phase 1 test protocol and
+recommended future architecture.
+
+## GPIO18 LCD Power Proof of Concept
+
+Phase 2 adds disabled-by-default presence-driven LCD blank/restore behaviour.
+Enable it only for development testing:
+
+```bash
+adb shell am start \
+  -n au.com.shyfted.client/.MainActivity \
+  --ez presence.lcd_power.enabled true \
+  --el presence.lcd_power.stable_low_timeout_ms 30000
+```
+
+The current proof of concept uses app-level window brightness plus a black
+overlay, not Android system sleep. See `docs/gpio18_lcd_power_phase2.md` for
+the RK3566 display-control inspection, five-cycle test results, and production
+recommendation.
+
 ## Current v0.1 Behavior
 
 - Package name: `au.com.shyfted.client`
-- App name: `Shyfted Client`
+- App name: `ShyftTab`
 - Shyfted avatar launcher icon
 - Shyfted branded splash/loading and offline screens
 - External configuration for device name, device ID, and CMS URL

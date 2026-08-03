@@ -59,7 +59,8 @@ public final class MainActivity extends Activity {
     private DeviceConfig deviceConfig;
     private ShyftedDeviceClient deviceClient;
     private PeteyEinkServiceProbe peteyEinkServiceProbe;
-    private Gpio18PresenceMonitor gpio18PresenceMonitor;
+    private PresenceMonitor presenceMonitor;
+    private LcdPowerController lcdPowerController;
     private boolean mainFrameLoadFailed;
     private boolean batteryPulseBright = true;
     private Integer lastBatteryPercent;
@@ -108,12 +109,13 @@ public final class MainActivity extends Activity {
                 this::sendEinkContent
         );
         peteyEinkServiceProbe = new PeteyEinkServiceProbe(this);
-        gpio18PresenceMonitor = new Gpio18PresenceMonitor();
         Log.i(ShyftedDeviceClient.TAG, "Loaded device config source=" + deviceConfig.source
                 + " deviceName=" + deviceConfig.deviceName
                 + " deviceId=" + deviceConfig.deviceId
                 + " cmsUrl=" + deviceConfig.cmsUrl
-                + " display=" + displayMetrics.widthPixels + "x" + displayMetrics.heightPixels);
+                + " display=" + displayMetrics.widthPixels + "x" + displayMetrics.heightPixels
+                + " presence_lcd_power_enabled=" + deviceConfig.presenceLcdPowerEnabled
+                + " presence_stable_low_timeout_ms=" + deviceConfig.presenceStableLowTimeoutMs);
 
         FrameLayout root = new FrameLayout(this);
         root.setBackgroundColor(COLOR_BLACK);
@@ -153,6 +155,7 @@ public final class MainActivity extends Activity {
         );
         batteryParams.setMargins(0, dp(8), dp(10), 0);
         root.addView(batteryTextView, batteryParams);
+        lcdPowerController = new LcdPowerController(this, root);
 
         setContentView(root);
         enterFullScreen();
@@ -161,7 +164,7 @@ public final class MainActivity extends Activity {
         refreshBatteryStateOnce();
         showLastGoodLcdContent();
         peteyEinkServiceProbe.start();
-        gpio18PresenceMonitor.start();
+        startPresencePowerManagementIfEnabled();
         handleEpdProbeIntent(getIntent());
         if (!isEpdProbeOnly(getIntent())) {
             deviceClient.start();
@@ -199,9 +202,9 @@ public final class MainActivity extends Activity {
             peteyEinkServiceProbe.stop();
             peteyEinkServiceProbe = null;
         }
-        if (gpio18PresenceMonitor != null) {
-            gpio18PresenceMonitor.stop();
-            gpio18PresenceMonitor = null;
+        if (presenceMonitor != null) {
+            presenceMonitor.stop();
+            presenceMonitor = null;
         }
         if (webView != null) {
             webView.destroy();
@@ -466,6 +469,35 @@ public final class MainActivity extends Activity {
         enterFullScreen();
     }
 
+    private void startPresencePowerManagementIfEnabled() {
+        if (!deviceConfig.presenceLcdPowerEnabled) {
+            Log.i(ShyftedDeviceClient.TAG, "Presence LCD power management disabled");
+            return;
+        }
+
+        Log.i(ShyftedDeviceClient.TAG, "Presence LCD power management enabled"
+                + " stable_low_timeout_ms=" + deviceConfig.presenceStableLowTimeoutMs);
+        presenceMonitor = new PresenceMonitor(
+                deviceConfig.presenceStableLowTimeoutMs,
+                new PresenceMonitor.Listener() {
+                    @Override
+                    public void onPresenceActive(long eventElapsedMs) {
+                        if (lcdPowerController != null) {
+                            lcdPowerController.restoreLcd("presence_active", eventElapsedMs);
+                        }
+                    }
+
+                    @Override
+                    public void onPresenceInactive(long eventElapsedMs) {
+                        if (lcdPowerController != null) {
+                            lcdPowerController.requestLcdOff("presence_stable_low_timeout");
+                        }
+                    }
+                }
+        );
+        presenceMonitor.start();
+    }
+
     private int dp(int value) {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
@@ -667,7 +699,7 @@ public final class MainActivity extends Activity {
         layout.addView(powerOff);
 
         new AlertDialog.Builder(this)
-                .setTitle("Petey controls")
+                .setTitle("Device controls")
                 .setView(layout)
                 .setNegativeButton("Close", null)
                 .show();
@@ -696,9 +728,9 @@ public final class MainActivity extends Activity {
         if (deviceClient != null) {
             deviceClient.stop();
         }
-        if (gpio18PresenceMonitor != null) {
-            gpio18PresenceMonitor.stop();
-            gpio18PresenceMonitor = null;
+        if (presenceMonitor != null) {
+            presenceMonitor.stop();
+            presenceMonitor = null;
         }
         if (webView != null) {
             webView.onPause();
