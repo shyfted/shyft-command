@@ -1,23 +1,41 @@
 .env
+.env.*
+!.env.example
+.venv/
+.pytest_cache/
 *.db
 *.sqlite
+*.sqlite3
 data/*.json
 uploads/
 static/uploads/
 rendered/
 previews/
 cache/
-**pycache**/
+__pycache__/
+**/__pycache__/
 *.pyc
+*.log
 .DS_Store
 latest.png
+*.zip
+*.tar
+*.tar.gz
+*.tgz
 
 # Local runtime/media state
 data/*.db-*
 products.json
 
 # Android/Petey generated investigation artifacts
+android_client/.gradle/
+android_client/build/
+android_client/app/build/
+android_client/local.properties
+android_client/**/*.apk
+android_client/**/*.dex
 android_client/petey_*.txt
+android_client/docs/phase3_evidence/
 android_client/phase2_geniatech/**/*.apk
 android_client/phase2_geniatech/*.dex
 android_client/phase2_geniatech/**/*.so
