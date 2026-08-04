@@ -18,7 +18,7 @@ Stabilisation has now preserved the legitimate ShyftTab/Android work in Git, mov
 
 | Item | Value |
 | --- | --- |
-| Absolute path | `/Users/katmeintjes/Shyfted GitHub/shyfted_cms` |
+| Absolute path | `/Users/katmeintjes/Shyfted/products/shyft-command` |
 | Current branch | `main` |
 | Upstream | `origin/main` |
 | Remote | `origin` -> `https://github.com/shyfted/shyfted_cms` |
@@ -260,7 +260,7 @@ Do not commit:
 
 ## 14. Path Dependencies
 
-No references to `/Users/katmeintjes/Shyfted GitHub/shyfted_cms` were found inside this repository.
+No references to the legacy `/Users/katmeintjes/Shyfted GitHub/shyfted_cms` path remain inside this repository.
 
 References outside this repository were found but not modified:
 
