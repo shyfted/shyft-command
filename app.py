@@ -15,6 +15,7 @@ import click
 from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import fitz
 from werkzeug.security import check_password_hash, generate_password_hash
+from hanshow_integration import HanshowError, submit as submit_esl_push, targets_from_environment
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("AUTH_SESSION_SECRET") or os.environ.get("SECRET_KEY")
@@ -23,14 +24,18 @@ if not app.secret_key:
 
 APP_DISPLAY_NAME = "Shyft Command"
 APP_SHORT_NAME = "Command"
+VEHICLE_HANGERS_LABEL = "Vehicle Hangers"
+APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 STORAGE_DIR = os.environ.get("SHYFTED_STORAGE_DIR")
 if STORAGE_DIR:
     STORAGE_DIR = os.path.abspath(STORAGE_DIR)
     DATA_DIR = os.path.join(STORAGE_DIR, "data")
     UPLOAD_FOLDER = os.path.join(STORAGE_DIR, "uploads")
 else:
-    DATA_DIR = "data"
-    UPLOAD_FOLDER = os.path.join("static", "uploads")
+    # Keep local sandbox state anchored to the application, regardless of the
+    # shell working directory used to launch it.
+    DATA_DIR = os.path.join(APP_ROOT, "data")
+    UPLOAD_FOLDER = os.path.join(APP_ROOT, "static", "uploads")
 ORIGINAL_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "original")
 NORMALISED_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "normalised")
 RENDERED_UPLOAD_FOLDER = os.path.join(UPLOAD_FOLDER, "rendered")
@@ -85,6 +90,15 @@ EINK_PDF_SAFE_MARGIN = 40
 EINK_PDF_RENDER_ZOOM = 4
 EINK_PDF_WHITE_THRESHOLD = 245
 EINK_PDF_CROP_PADDING = 20
+LUMINA_SIX_COLOUR_PROFILE = "lumina_six_colour"
+LUMINA_SIX_COLOUR_PALETTE = (
+    (0, 0, 0),
+    (255, 255, 255),
+    (255, 0, 0),
+    (255, 255, 0),
+    (0, 0, 255),
+    (0, 255, 0),
+)
 
 
 def allowed_file(filename):
@@ -158,6 +172,65 @@ def save_media_catalog(catalog):
 
 def utc_timestamp():
     return datetime.utcnow().isoformat() + "Z"
+
+
+def get_push_jobs():
+    return load_json("push_jobs.json", [])
+
+
+def save_push_jobs(jobs):
+    # Keep a bounded operational history; request payloads and credentials are
+    # deliberately never persisted.
+    save_json("push_jobs.json", jobs[-100:])
+
+
+def record_push_job(job):
+    jobs = get_push_jobs()
+    jobs.append(job)
+    save_push_jobs(jobs)
+
+
+def update_push_job(job_id, **changes):
+    jobs = get_push_jobs()
+    for job in jobs:
+        if job.get("id") == job_id:
+            if changes.get("status"):
+                job.setdefault("events", []).append({
+                    "status": changes["status"],
+                    "label": changes.get("status_label", changes["status"].capitalize()),
+                    "at": changes.get("updated_at", utc_timestamp()),
+                })
+            job.update(changes)
+            break
+    save_push_jobs(jobs)
+
+
+def hide_push_job_from_history(job_id):
+    """Hide one audit row without removing data used to describe Live state."""
+    jobs = get_push_jobs()
+    for job in jobs:
+        if job.get("id") == job_id:
+            job["history_deleted_at"] = utc_timestamp()
+            save_push_jobs(jobs)
+            return True
+    return False
+
+
+def hide_push_jobs_from_history(job_ids):
+    """Hide selected audit rows while retaining records used for Live state."""
+    selected = set(job_ids)
+    if not selected:
+        return 0
+    jobs = get_push_jobs()
+    hidden_at = utc_timestamp()
+    hidden_count = 0
+    for job in jobs:
+        if job.get("id") in selected and not job.get("history_deleted_at"):
+            job["history_deleted_at"] = hidden_at
+            hidden_count += 1
+    if hidden_count:
+        save_push_jobs(jobs)
+    return hidden_count
 
 
 def db_path():
@@ -421,6 +494,7 @@ def inject_auth_context():
     return {
         "app_display_name": APP_DISPLAY_NAME,
         "app_short_name": APP_SHORT_NAME,
+        "vehicle_hangers_label": VEHICLE_HANGERS_LABEL,
         "csrf_token": generate_csrf_token,
         "current_user": current_user(),
         "window_session_storage_key": WINDOW_SESSION_STORAGE_KEY,
@@ -760,6 +834,39 @@ def fit_to_screen(path, size, background):
     return canvas
 
 
+def quantize_lumina_six_colour(image):
+    """Map RGB pixels deterministically to the Lumina BWRYBG palette without dithering."""
+    palette_image = Image.new("P", (1, 1))
+    palette_values = [channel for colour in LUMINA_SIX_COLOUR_PALETTE for channel in colour]
+    palette_values.extend([255, 255, 255] * (256 - len(LUMINA_SIX_COLOUR_PALETTE)))
+    palette_image.putpalette(palette_values)
+    return image.convert("RGB").quantize(
+        palette=palette_image,
+        dither=Image.Dither.NONE,
+    )
+
+
+def render_lumina_six_colour(path, size, rotation=0, render_context=None, output_path=None):
+    fit_size = size if rotation in (0, 180) else (size[1], size[0])
+    rendered = None
+    if get_extension(path) == "pdf":
+        rendered = render_cropped_pdf(
+            path,
+            fit_size,
+            "eink",
+            (255, 255, 255),
+            render_context=render_context,
+            output_path=output_path,
+            safe_margin=EINK_PDF_SAFE_MARGIN,
+            grayscale=False,
+        )
+    if rendered is None:
+        rendered = fit_to_screen(path, fit_size, (255, 255, 255))
+    if rotation:
+        rendered = rendered.rotate(rotation, expand=True)
+    return quantize_lumina_six_colour(rendered)
+
+
 def crop_pdf_content(img):
     grayscale = img.convert("L")
     mask = grayscale.point(lambda value: 255 if value < EINK_PDF_WHITE_THRESHOLD else 0)
@@ -933,6 +1040,15 @@ def render_screen_image(filename, screen, device=None, render_context=None, outp
     if not source_path:
         abort(404)
 
+    if config.get("render_profile") == LUMINA_SIX_COLOUR_PROFILE:
+        return render_lumina_six_colour(
+            source_path,
+            size,
+            rotation=int(config["rotation"] or 0) % 360,
+            render_context=render_context,
+            output_path=output_path,
+        )
+
     if screen == "eink" or config.get("type") == "eink":
         rotation = int(config["rotation"] or 0) % 360
         fit_size = size if rotation in (0, 180) else (size[1], size[0])
@@ -1020,6 +1136,7 @@ def screen_content_id(filename, screen, device):
             "type": config.get("type"),
             "color": config.get("color"),
             "rotation": config["rotation"],
+            "render_profile": config.get("render_profile", "monochrome_eink"),
         },
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -1241,6 +1358,7 @@ def device_cards():
             "status": "online" if is_device_online(device) else "offline",
             "last_seen": device.get("last_seen"),
             "battery": battery_label(device),
+            "screens": device.get("screens") or {},
             "lcd": live_preview(device_id, "lcd", live, device),
             "eink": live_preview(device_id, "eink", live, device),
         })
@@ -1261,6 +1379,9 @@ def device_view_model(device_id):
         "status": "online" if is_device_online(device) else "offline",
         "last_seen": device.get("last_seen"),
         "battery": battery_label(device),
+        "hostname": device.get("hostname"),
+        "client_version": device.get("client_version"),
+        "screens": device.get("screens") or {},
         "live": live,
         "selection": selection,
         "lcd": live_preview(device_id, "lcd", live, device),
@@ -1598,6 +1719,337 @@ def media():
     )
 
 
+def customer_esl_targets():
+    """Return only the two approved 13.3-inch Luminas for ESL Updates v1."""
+    configured = targets_from_environment()
+    allowed_ids = {
+        item.strip()
+        for item in os.environ.get("SHYFT_ESL_UI_TARGET_IDS", "").split(",")
+        if item.strip()
+    }
+    eligible = [
+        target
+        for target in configured
+        if target.width == 1600
+        and target.height == 1200
+        and (not allowed_ids or target.id in allowed_ids)
+    ][:2]
+    return [
+        type(target)(
+            id=target.id,
+            label=f"Showroom Display {index}",
+            sku=target.sku,
+            width=target.width,
+            height=target.height,
+            rotation=target.rotation,
+            render_profile=target.render_profile,
+        )
+        for index, target in enumerate(eligible, start=1)
+    ]
+
+
+def esl_live_state(push_jobs, targets):
+    """Return Command's latest accepted content for each configured display."""
+    configured_ids = {target.id for target in targets}
+    live_by_target = {}
+    for job in push_jobs:
+        if job.get("status") != "accepted" or not job.get("asset"):
+            continue
+        for target in job.get("targets", []):
+            target_id = target.get("id")
+            current = live_by_target.get(target_id)
+            if (
+                target_id in configured_ids
+                and (not current or (job.get("updated_at") or "") >= (current.get("updated_at") or ""))
+            ):
+                live_by_target[target_id] = {
+                    "asset": job["asset"],
+                    "updated_at": job.get("updated_at"),
+                    "batch_no": job.get("batch_no"),
+                }
+    return live_by_target
+
+
+def get_esl_staging():
+    return load_json("esl_staging.json", {})
+
+
+def get_esl_staged_asset(target_id):
+    return get_esl_staging().get(target_id)
+
+
+def set_esl_staged_asset(target_id, filename):
+    staging = get_esl_staging()
+    staging[target_id] = filename
+    save_json("esl_staging.json", staging)
+
+
+def clear_esl_staged_asset(target_id, filename=None):
+    staging = get_esl_staging()
+    if target_id not in staging or (filename and staging.get(target_id) != filename):
+        return False
+    staging.pop(target_id, None)
+    save_json("esl_staging.json", staging)
+    return True
+
+
+def esl_target_workspace(target, push_jobs):
+    live = esl_live_state(push_jobs, [target]).get(target.id)
+    display_number = target.label.rsplit(" ", 1)[-1]
+    return {
+        "id": target.id,
+        "name": target.label,
+        "model": '13.3" Lumina',
+        "width": target.width,
+        "height": target.height,
+        "status": "available",
+        "short_name": f"S-ROOM {display_number}",
+        "live": live,
+        "staged": get_esl_staged_asset(target.id),
+    }
+
+
+@app.route("/esl")
+@login_required
+def esl():
+    configuration_error = None
+    try:
+        targets = customer_esl_targets()
+    except HanshowError as error:
+        targets = []
+        configuration_error = str(error)
+    files = list_uploads()
+    push_jobs = get_push_jobs()
+    return render_template(
+        "index.html",
+        files=files,
+        devices=device_cards(),
+        active_device=None,
+        page="esl",
+        esl_targets=targets,
+        esl_live_by_target=esl_live_state(push_jobs, targets),
+        push_jobs=list(reversed([job for job in push_jobs if not job.get("history_deleted_at")][-10:])),
+        esl_configuration_error=configuration_error,
+    )
+
+
+@app.route("/esl/<target_id>")
+@login_required
+def esl_device(target_id):
+    try:
+        targets = customer_esl_targets()
+    except HanshowError as error:
+        flash(str(error), "error")
+        return redirect(url_for("esl"))
+    target = next((item for item in targets if item.id == target_id), None)
+    if not target:
+        flash("That display is not available.", "error")
+        return redirect(url_for("esl"))
+
+    push_jobs = get_push_jobs()
+    files = list_uploads()
+    workspace = esl_target_workspace(target, push_jobs)
+    staged_file = next((item for item in files if item.get("name") == workspace["staged"]), None)
+    target_jobs = [
+        job for job in push_jobs
+        if not job.get("history_deleted_at")
+        and any(item.get("id") == target_id for item in job.get("targets", []))
+    ]
+    return render_template(
+        "index.html",
+        files=files,
+        devices=device_cards(),
+        active_device=None,
+        page="esl_workspace",
+        esl_target=target,
+        esl_workspace=workspace,
+        esl_staged_file=staged_file,
+        push_jobs=list(reversed(target_jobs[-10:])),
+    )
+
+
+@app.route("/esl/<target_id>/stage", methods=["POST"])
+@login_required
+def stage_esl(target_id):
+    validate_csrf()
+    filename = clean_filename(request.form.get("file"))
+    try:
+        target = next((item for item in customer_esl_targets() if item.id == target_id), None)
+    except HanshowError as error:
+        flash(str(error), "error")
+        return redirect(url_for("esl"))
+    if not target:
+        flash("That display is not available.", "error")
+        return redirect(url_for("esl"))
+    if not filename or not upload_exists(filename):
+        flash("Choose valid content for this display.", "error")
+        return redirect(url_for("esl_device", target_id=target_id))
+
+    set_esl_staged_asset(target_id, filename)
+    flash(f"Staged {filename} for {target.label}.", "success")
+    return redirect(url_for("esl_device", target_id=target_id))
+
+
+@app.route("/esl/preview/<target_id>/<path:filename>")
+@login_required
+def esl_preview(target_id, filename):
+    filename = clean_filename(filename)
+    if not filename or not upload_exists(filename):
+        abort(404)
+    try:
+        target = next((item for item in customer_esl_targets() if item.id == target_id), None)
+    except HanshowError:
+        target = None
+    if not target:
+        abort(404)
+    device = {
+        "screens": {
+            "eink": {
+                "type": "eink",
+                "width": target.width,
+                "height": target.height,
+                "color": False,
+                "orientation": target.rotation,
+                "render_profile": target.render_profile,
+            }
+        }
+    }
+    output, mimetype, _extension = render_for_screen(
+        filename,
+        "eink",
+        device,
+        render_context=f"esl-preview/{target.id}",
+    )
+    output.seek(0)
+    return send_file(output, mimetype=mimetype, max_age=0)
+
+
+@app.route("/esl/push", methods=["POST"])
+@app.route("/esl/<target_id>/push", methods=["POST"])
+@login_required
+def push_esl(target_id=None):
+    validate_csrf()
+    target_id = target_id or (request.form.get("target_id") or "").strip()
+    filename = get_esl_staged_asset(target_id) if target_id else None
+    if not filename:
+        filename = clean_filename(request.form.get("file"))
+    redirect_target = url_for("esl_device", target_id=target_id) if target_id else url_for("esl")
+
+    if not filename or not upload_exists(filename):
+        flash("Choose valid content before updating the display.", "error")
+        return redirect(redirect_target)
+
+    try:
+        targets = customer_esl_targets()
+    except HanshowError as error:
+        flash(str(error), "error")
+        return redirect(redirect_target)
+    target = next((item for item in targets if item.id == target_id), None)
+    if not target:
+        flash("Choose an available display.", "error")
+        return redirect(redirect_target)
+
+    job_id = secrets.token_hex(12)
+    job = {
+        "id": job_id,
+        "status": "queued",
+        "status_label": "Preparing",
+        "asset": filename,
+        "targets": [{"id": target.id, "label": target.label}],
+        "created_at": utc_timestamp(),
+        "updated_at": utc_timestamp(),
+        "physical_display_confirmed": False,
+        "events": [{"status": "queued", "label": "Preparing", "at": utc_timestamp()}],
+    }
+    record_push_job(job)
+
+    render_device = {
+        "screens": {
+            "eink": {
+                "type": "eink",
+                "width": target.width,
+                "height": target.height,
+                "color": False,
+                "orientation": target.rotation,
+                "render_profile": target.render_profile,
+            }
+        }
+    }
+    try:
+        rendered, _mimetype, _extension = render_for_screen(
+            filename,
+            "eink",
+            render_device,
+            render_context=f"esl-push/{job_id}",
+        )
+        update_push_job(
+            job_id,
+            status="rendered",
+            status_label="Preparing",
+            updated_at=utc_timestamp(),
+        )
+        update_push_job(
+            job_id,
+            status="submitting",
+            status_label="Sending",
+            updated_at=utc_timestamp(),
+        )
+        result = submit_esl_push(rendered.getvalue(), [target])
+        update_push_job(
+            job_id,
+            status="accepted",
+            status_label="Update sent",
+            batch_no=result["batch_no"],
+            physical_display_confirmed=result["physical_display_confirmed"],
+            updated_at=utc_timestamp(),
+        )
+        clear_esl_staged_asset(target.id, filename)
+        print(
+            "[ESL PUSH ACCEPTED] "
+            f"job={job_id} target={target.id} asset={filename} batch={result['batch_no']}"
+        )
+        flash(
+            f"Update sent to {target.label}.",
+            "success",
+        )
+    except (HanshowError, ValueError, OSError) as error:
+        update_push_job(
+            job_id,
+            status="failed",
+            status_label="Failed",
+            error="We couldn't send this update. Please try again.",
+            updated_at=utc_timestamp(),
+        )
+        print(f"[ESL PUSH FAILED] job={job_id} target={target.id} error={error}")
+        flash("We couldn't send the display update. Please try again.", "error")
+
+    return redirect(redirect_target)
+
+
+@app.route("/esl/activity/<job_id>/delete", methods=["POST"])
+@login_required
+def delete_esl_activity(job_id):
+    validate_csrf()
+    if not hide_push_job_from_history(job_id):
+        abort(404)
+    flash("Removed the activity entry from Shyft Command history.", "success")
+    return redirect(url_for("esl"))
+
+
+@app.route("/esl/activity/delete", methods=["POST"])
+@login_required
+def delete_esl_activities():
+    validate_csrf()
+    job_ids = [job_id.strip() for job_id in request.form.getlist("job_ids") if job_id.strip()]
+    removed = hide_push_jobs_from_history(job_ids)
+    if not removed:
+        flash("Select at least one activity entry to remove.", "error")
+    else:
+        noun = "entry" if removed == 1 else "entries"
+        flash(f"Removed {removed} activity {noun} from Shyft Command history.", "success")
+    return redirect(url_for("esl"))
+
+
 @app.route("/settings")
 @login_required
 def settings():
@@ -1737,11 +2189,14 @@ def delete_user(user_id):
 @login_required
 def upload():
     validate_csrf()
+    next_url = (request.form.get("next") or url_for("index")).strip()
+    if not next_url.startswith("/") or next_url.startswith("//"):
+        next_url = url_for("index")
     file = request.files.get("file")
 
     if not file or not allowed_file(file.filename):
         flash("Upload a PNG, JPG, JPEG, or PDF file.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     file.seek(0, os.SEEK_END)
     size = file.tell()
@@ -1749,16 +2204,16 @@ def upload():
 
     if size == 0:
         flash("File is empty. Choose a valid PNG, JPG, JPEG, or PDF file.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     if size > MAX_FILE_SIZE:
         flash("File too large. Maximum size is 5MB.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     filename = clean_filename(file.filename)
     if not filename:
         flash("Choose a valid file to upload.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     original_filename = filename
     extension = get_extension(original_filename)
@@ -1773,7 +2228,7 @@ def upload():
     catalog = get_media_catalog()
     if filename in catalog or any(os.path.exists(path) for path in conflicts):
         flash("A file with that name already exists.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     file.save(original_path)
 
@@ -1789,10 +2244,10 @@ def upload():
         print("[UPLOAD ERROR]", e)
         cleanup_upload(original_path)
         flash("That file could not be processed. Upload a valid PNG, JPG, JPEG, or PDF under 5MB.", "error")
-        return redirect("/")
+        return redirect(next_url)
 
     flash(f"Uploaded {filename}.", "success")
-    return redirect("/")
+    return redirect(next_url)
 
 
 @app.route("/stage_lcd", methods=["POST"])

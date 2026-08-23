@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-labelledby="title description">
+  <title id="title">Please select media below</title>
+  <desc id="description">A simple picture placeholder for a Vehicle Hanger display.</desc>
+  <rect width="800" height="600" fill="#ffffff"/>
+  <rect x="52" y="52" width="696" height="496" rx="28" fill="#f4f1ff" stroke="#3730a3" stroke-width="10" stroke-dasharray="24 18"/>
+  <rect x="278" y="145" width="244" height="170" rx="18" fill="#d9d7ff" stroke="#3730a3" stroke-width="9"/>
+  <circle cx="450" cy="205" r="26" fill="#ffff00" stroke="#000000" stroke-width="7"/>
+  <path d="M302 285l70-72 58 57 38-37 30 52z" fill="#00a83b" stroke="#000000" stroke-width="7" stroke-linejoin="round"/>
+  <text x="400" y="390" fill="#000000" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" text-anchor="middle">Please select</text>
+  <text x="400" y="448" fill="#3730a3" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700" text-anchor="middle">media below</text>
+</svg>

@@ -11,8 +11,34 @@ Copy `.env.example` to `.env` in the deployment environment and set real values.
 - `AUTH_SESSION_SECRET` set to a long random value
 - `CMS_ADMIN_EMAIL` and `CMS_ADMIN_PASSWORD` for first-admin bootstrap
 - SMTP settings for password reset email delivery
+- Hanshow IntegrationProxy settings and `SHYFT_ESL_TARGETS` for ESL delivery
 
 Do not commit `.env`, the SQLite database, uploaded media, or generated runtime state.
+
+## ESL updates
+
+The **ESL Updates** page is available from the hamburger menu. An authenticated
+user chooses existing content, previews the target-sized E-Ink render, selects a
+showroom display, and submits the update through the existing delivery adapter.
+Version 1 exposes at most two `1600x1200` targets. `SHYFT_ESL_UI_TARGET_IDS` can
+explicitly allow-list them when additional targets exist in `SHYFT_ESL_TARGETS`.
+
+Command retains its internal `queued`, `rendered`, `submitting`, `accepted`, and
+`failed` states while presenting Preparing, Sending, Update sent, and Failed to
+customers. Update sent does not claim that the physical display refreshed.
+Credentials, access tokens, bound SKUs, provider references, and image payloads
+are not exposed in the UI or persisted in push history.
+
+### ESL render profiles
+
+Targets default to `monochrome_eink`. Compatible 13.3-inch Luminas may opt in
+with `"render_profile":"lumina_six_colour"`. That profile proportionally fits
+the source onto a white 1600 x 1200 canvas, then deterministically maps every
+pixel to black, white, red, yellow, blue, or green using Pillow's nearest-colour
+palette quantizer with dithering disabled. Preview and submission both use this
+same renderer. The Hanshow material supplied with this project does not specify
+the required PNG colour mode for `rsrvBlob`, so colour transport remains subject
+to a separately approved physical test.
 
 ## Local Setup
 

@@ -38,9 +38,13 @@ h3 {
 
 .topbar {
     align-items:center;
+    background:#171c26;
+    border:1px solid #2a3344;
+    border-radius:10px;
     display:flex;
     gap:14px;
     margin-bottom:18px;
+    padding:8px 10px 8px 14px;
 }
 
 .brand {
@@ -58,7 +62,7 @@ h3 {
     border:1px solid #2a3344;
     border-radius:8px;
     cursor:pointer;
-    display:flex;
+    display:none;
     flex:0 0 42px;
     height:42px;
     justify-content:center;
@@ -81,25 +85,16 @@ h3 {
 .hamburger span:after { transform:translateY(6px); }
 
 .menu {
-    background:#171c26;
-    border:1px solid #2a3344;
-    border-radius:8px;
-    box-shadow:0 18px 44px rgba(0, 0, 0, 0.38);
-    display:none;
-    left:20px;
-    min-width:180px;
-    padding:8px;
-    position:absolute;
-    top:68px;
-    z-index:20;
+    align-items:center;
+    display:flex;
+    gap:4px;
+    margin-left:12px;
 }
-
-.menu-toggle:checked ~ .menu { display:block; }
 
 .menu a {
     border-radius:7px;
     color:#dbe4f3;
-    display:block;
+    display:inline-flex;
     font-size:14px;
     font-weight:700;
     padding:10px 12px;
@@ -108,6 +103,7 @@ h3 {
 
 .menu a.active,
 .menu a:hover { background:#273143; }
+.menu a.active { box-shadow:inset 0 -2px #f7d99d; color:#fff2d3; }
 
 .actions {
     align-items:center;
@@ -370,7 +366,7 @@ button:hover,
     border-radius:6px;
     cursor:pointer;
     height:84px;
-    object-fit:cover;
+    object-fit:contain;
     width:100%;
 }
 
@@ -422,6 +418,251 @@ button:hover,
     color:#94a3b8;
     padding:18px;
 }
+
+.page-kicker {
+    color:#f7d99d;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.08em;
+    margin-bottom:5px;
+    text-transform:uppercase;
+}
+
+.esl-form,
+.job-list {
+    background:#171c26;
+    border:1px solid #2a3344;
+    border-radius:8px;
+    margin-bottom:18px;
+    padding:16px;
+}
+
+.esl-workflow {
+    display:grid;
+    gap:18px;
+    grid-template-columns:minmax(0, 1.25fr) minmax(300px, .75fr);
+    margin-bottom:22px;
+}
+
+.esl-step {
+    background:#171c26;
+    border:1px solid #2a3344;
+    border-radius:12px;
+    padding:20px;
+}
+
+.esl-step h3 { margin:0 0 5px; }
+.esl-step-copy { color:#94a3b8; font-size:12px; margin-bottom:16px; }
+
+.esl-content-grid {
+    display:grid;
+    gap:10px;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    max-height:390px;
+    overflow:auto;
+}
+
+.esl-choice input { position:absolute; opacity:0; pointer-events:none; }
+.esl-choice-card {
+    background:#10131a;
+    border:2px solid transparent;
+    border-radius:10px;
+    cursor:pointer;
+    display:block;
+    overflow:hidden;
+    transition:border-color .15s ease, transform .15s ease;
+}
+.esl-choice-card:hover { border-color:#3a465c; transform:translateY(-1px); }
+.esl-choice input:checked + .esl-choice-card { border-color:#8ca9ff; }
+.esl-choice-card img { aspect-ratio:4 / 3; background:white; display:block; object-fit:contain; width:100%; }
+.esl-choice-name {
+    display:block;
+    font-size:11px;
+    font-weight:700;
+    overflow:hidden;
+    padding:9px;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+
+.esl-preview-frame {
+    align-items:center;
+    aspect-ratio:3 / 4;
+    background:#fff;
+    border-radius:10px;
+    display:flex;
+    justify-content:center;
+    margin-bottom:16px;
+    overflow:hidden;
+}
+.esl-preview-frame img { height:100%; object-fit:contain; width:100%; }
+.esl-preview-empty { color:#64748b; font-size:13px; padding:24px; text-align:center; }
+
+.display-options { display:grid; gap:9px; margin:14px 0 18px; }
+.display-option input { position:absolute; opacity:0; pointer-events:none; }
+.display-option span {
+    align-items:center;
+    background:#10131a;
+    border:2px solid transparent;
+    border-radius:9px;
+    cursor:pointer;
+    display:flex;
+    font-weight:800;
+    justify-content:space-between;
+    padding:13px 14px;
+}
+.display-option span:after { color:#6f7d91; content:"Available"; font-size:10px; font-weight:700; }
+.display-option input:checked + span { border-color:#8ca9ff; }
+.display-option input:checked + span:after { color:#b9c8ff; content:"Selected"; }
+.esl-submit { margin:0; width:100%; }
+.esl-submit:disabled { cursor:not-allowed; opacity:.45; }
+.status-note { color:#94a3b8; font-size:11px; line-height:1.5; margin-top:10px; }
+
+.hanger-device-grid {
+    display:grid;
+    gap:12px;
+    grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));
+    margin-bottom:18px;
+}
+.hanger-device-card {
+    background:#171c26;
+    border:1px solid #2a3344;
+    border-radius:10px;
+    display:block;
+    min-width:0;
+    padding:10px;
+}
+.hanger-device-card.is-selected { border-color:#8ca9ff; box-shadow:0 0 0 1px #8ca9ff inset; }
+.hanger-device-head { align-items:start; display:flex; justify-content:space-between; margin-bottom:10px; }
+.hanger-device-name { display:block; font-size:13px; font-weight:900; margin-bottom:3px; }
+.hanger-device-type { color:#b8c4d6; display:block; font-size:11px; }
+.hanger-device-details { color:#8794a7; display:flex; flex-wrap:wrap; font-size:11px; gap:8px 14px; }
+.hanger-state-grid { display:grid; gap:7px; grid-template-columns:repeat(2, minmax(0, 1fr)); margin-top:9px; }
+.hanger-state {
+    background:#10131a;
+    border:1px solid #2a3344;
+    border-radius:8px;
+    min-width:0;
+    padding:6px;
+}
+.hanger-state.staged { border-color:#365f4d; }
+.hanger-state-label { border-radius:5px; display:inline-block; font-size:9px; font-weight:900; margin-bottom:5px; padding:3px 6px; text-transform:uppercase; }
+.hanger-state.live .hanger-state-label { background:#d9d7ff; color:#3730a3; }
+.hanger-state.staged .hanger-state-label { background:#bfead7; color:#14532d; }
+.hanger-preview-frame {
+    align-items:center;
+    aspect-ratio:4 / 3;
+    background:#fff;
+    border-radius:6px;
+    display:flex;
+    justify-content:center;
+    overflow:hidden;
+}
+.hanger-preview-frame img { cursor:pointer; display:block; height:auto; max-height:100%; max-width:100%; object-fit:contain; width:auto; }
+.hanger-preview-frame img.is-placeholder { cursor:default; height:100%; max-height:none; max-width:none; width:100%; }
+.hanger-preview-empty { color:#64748b; font-size:10px; padding:10px; text-align:center; }
+.hanger-state-name { color:#eef3fb; font-size:10px; font-weight:800; margin-top:5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hanger-state-meta { color:#8794a7; font-size:10px; line-height:1.35; margin-top:3px; }
+.hanger-card-actions { display:grid; gap:6px; grid-template-columns:1fr 1fr; margin-top:7px; }
+.hanger-card-actions button { font-size:10px; padding:7px 6px; }
+.hanger-select { background:#252d3c; color:#dce5f3; grid-column:1 / -1; }
+.hanger-device-card.is-selected .hanger-select { background:#d9d7ff; color:#3730a3; }
+.stage-action { background:#c7ddff; color:#17345c; }
+.stage-action:disabled,
+.hanger-push:disabled { cursor:not-allowed; opacity:.45; }
+.hanger-push { background:#f7d99d; color:#3f2f13; }
+.hanger-enlarge { background:transparent; color:#b9c8ff; font-size:10px; padding:3px 0; text-align:left; width:auto; }
+.hanger-instruction { color:#94a3b8; font-size:12px; margin:-5px 0 14px; }
+.fleet-tools { align-items:center; display:flex; gap:16px; justify-content:space-between; margin:0 0 18px; }
+.fleet-search { color:#94a3b8; display:grid; font-size:11px; font-weight:800; gap:5px; max-width:360px; width:100%; }
+.fleet-search input { background:#10131a; border:1px solid #3a465c; border-radius:8px; color:#eef3fb; font:inherit; padding:10px 12px; }
+.fleet-count { color:#8794a7; font-size:11px; font-weight:800; white-space:nowrap; }
+.open-workspace { color:#b9c8ff; display:block; font-size:11px; font-weight:900; margin-top:10px; }
+.workspace-nav { align-items:center; color:#8794a7; display:flex; font-size:11px; gap:8px; }
+.workspace-nav a { color:#b9c8ff; font-weight:800; text-decoration:none; }
+.workspace-nav span { border-left:1px solid #3a465c; color:#dbe4f3; padding-left:8px; }
+.back-link { color:#b9c8ff; display:inline-block; font-size:12px; font-weight:900; margin-bottom:10px; text-decoration:none; }
+.breadcrumb { align-items:center; color:#8794a7; display:flex; flex-wrap:wrap; font-size:11px; gap:7px; margin-bottom:18px; }
+.breadcrumb a { color:#b9c8ff; text-decoration:none; }
+.breadcrumb strong { color:#eef3fb; }
+.push:disabled, .secondary-action:disabled { cursor:not-allowed; opacity:.45; }
+.esl-live-banner { background:#d9d7ff; color:#3730a3; top:8px; }
+.esl-staged-banner { background:#bfead7; color:#14532d; top:30px; }
+.esl-action-spacer { pointer-events:none; visibility:hidden; }
+.activity-details { border-top:1px solid #2a3344; margin-top:28px; padding-top:16px; }
+.activity-details summary { cursor:pointer; font-size:16px; font-weight:900; }
+.confirmation-content { max-width:520px; }
+.confirmation-copy { color:#94a3b8; font-size:13px; margin:18px 0 6px; }
+.confirmation-value { color:#f4f7fb; display:block; font-size:16px; overflow-wrap:anywhere; }
+.confirmation-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:24px; }
+.confirmation-actions form { margin:0; }
+.confirmation-actions button { min-width:110px; }
+.confirmation-cancel { background:#30384a; color:#dbe4f3; }
+
+@media (max-width: 1120px) {
+    .hanger-device-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+
+.available-media {
+    background:#171c26;
+    border:1px solid #2a3344;
+    border-radius:12px;
+    margin-bottom:22px;
+    padding:18px;
+}
+.available-media .esl-content-grid { grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); max-height:none; }
+
+.esl-fields {
+    display:grid;
+    gap:12px;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    margin:14px 0;
+}
+
+.esl-field label {
+    color:#b8c4d6;
+    display:block;
+    font-size:12px;
+    font-weight:800;
+    margin-bottom:6px;
+}
+
+.esl-field select {
+    background:#10131a;
+    border:1px solid #3a465c;
+    border-radius:8px;
+    color:#eef3fb;
+    font:inherit;
+    padding:11px;
+    width:100%;
+}
+
+.job-row {
+    align-items:start;
+    border-top:1px solid #2a3344;
+    display:grid;
+    gap:8px;
+    grid-template-columns:minmax(120px, 1fr) minmax(120px, 1fr) auto;
+    padding:11px 0;
+}
+
+.job-row:first-of-type { border-top:none; }
+.job-meta { color:#94a3b8; font-size:11px; margin-top:4px; }
+.job-status { text-align:right; }
+.job-status-actions { align-items:center; display:flex; gap:7px; justify-content:flex-end; }
+.history-delete { background:transparent; color:#748196; font-size:15px; line-height:1; padding:2px 4px; width:auto; }
+.history-delete:hover { color:#f5bec6; }
+.job-list-head { align-items:end; display:flex; gap:12px; justify-content:space-between; }
+.job-bulk-form { margin:0; }
+.job-bulk-actions { align-items:center; display:flex; gap:9px; justify-content:flex-end; margin:4px 0 8px; }
+.job-select-all { align-items:center; color:#94a3b8; display:flex; font-size:11px; gap:6px; }
+.job-check { align-self:center; accent-color:#8ca9ff; height:15px; width:15px; }
+.job-row.with-selection { grid-template-columns:auto minmax(120px, 1fr) minmax(120px, 1fr) auto; }
+.bulk-delete { background:transparent; border:1px solid #3a465c; color:#b8c4d6; font-size:11px; padding:6px 9px; }
+.bulk-delete:disabled { cursor:not-allowed; opacity:.4; }
+.status.accepted { background:#c7ddff; color:#17345c; }
+.status.failed { background:#f5bec6; color:#7f1d1d; }
+.status.queued, .status.submitting, .status.rendered { background:#f7d99d; color:#3f2f13; }
 
 .modal {
     align-items:center;
@@ -585,8 +826,30 @@ button:hover,
     body { padding:14px; }
 
     .topbar {
-        align-items:flex-start;
+        align-items:center;
+        position:relative;
     }
+
+    .brand { flex:1; }
+    .brand h1 { font-size:21px; }
+    .hamburger { display:flex; order:2; }
+    .menu {
+        background:#171c26;
+        border:1px solid #2a3344;
+        border-radius:8px;
+        box-shadow:0 18px 44px rgba(0,0,0,.38);
+        display:none;
+        left:0;
+        margin:0;
+        padding:8px;
+        position:absolute;
+        right:0;
+        top:54px;
+        z-index:20;
+    }
+    .menu-toggle:checked ~ .menu { display:block; }
+    .menu a { display:block; }
+    .menu a.active { box-shadow:inset 3px 0 #f7d99d; }
 
     .actions {
         flex-wrap:wrap;
@@ -620,6 +883,14 @@ button:hover,
     .device-preview-pair {
         grid-template-columns:1fr;
     }
+
+    .esl-fields,
+    .job-row { grid-template-columns:1fr; }
+    .esl-workflow { grid-template-columns:1fr; }
+    .esl-content-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+    .hanger-device-grid { grid-template-columns:1fr; }
+    .fleet-tools { align-items:stretch; flex-direction:column; }
+    .job-status { text-align:left; }
 }
 </style>
 </head>
@@ -628,17 +899,23 @@ button:hover,
 
 <div class="topbar">
     <div class="brand">
+        <h1>{{ app_display_name }}</h1>
         <input class="menu-toggle" id="menuToggle" type="checkbox">
         <label class="hamburger" for="menuToggle" aria-label="Open menu"><span></span></label>
         <nav class="menu">
             <a class="{% if page == 'devices' %}active{% endif %}" href="{{ url_for('index') }}">Devices</a>
-            <a class="{% if page == 'media' %}active{% endif %}" href="{{ url_for('media') }}">Content</a>
+            <a class="{% if page in ['esl', 'esl_workspace'] %}active{% endif %}" href="{{ url_for('esl') }}">{{ vehicle_hangers_label }}</a>
+            <a class="{% if page == 'media' %}active{% endif %}" href="{{ url_for('media') }}">Media</a>
             <a class="{% if page == 'settings' %}active{% endif %}" href="{{ url_for('settings') }}">Settings</a>
         </nav>
-        <h1>{{ app_display_name }}</h1>
     </div>
 
     <div class="actions">
+        {% if page == "esl_workspace" %}
+        <div class="workspace-nav"><a href="{{ url_for('esl') }}">← {{ vehicle_hangers_label }}</a><span>{{ esl_workspace.name }}</span></div>
+        {% elif active_device %}
+        <div class="workspace-nav"><a href="{{ url_for('index') }}">← Devices</a><span>{{ active_device.name }}</span></div>
+        {% endif %}
         {% if current_user.role == "admin" %}
         <a class="user-link" href="{{ url_for('users') }}">Users</a>
         {% endif %}
@@ -660,14 +937,17 @@ button:hover,
 
 <div class="message error" id="uploadError" hidden></div>
 
+{% if page != "esl" %}
 <form class="upload-bar" id="uploadForm" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="next" value="{{ request.path }}">
     <label class="file-picker" for="uploadFile">Choose file</label>
     <input id="uploadFile" type="file" name="file" accept=".png,.jpg,.jpeg,.pdf" required>
     <span class="file-name" id="uploadFileName">No file chosen</span>
     <button type="submit">Upload</button>
 </form>
 <div class="upload-help">Allowed files: PNG, JPG, JPEG, or PDF. Maximum size: 5MB.</div>
+{% endif %}
 
 {% if page == "settings" %}
 <section>
@@ -679,11 +959,192 @@ button:hover,
     </div>
     <div class="placeholder">No settings are needed for this workflow.</div>
 </section>
+{% elif page == "esl" %}
+<section>
+    <div class="section-head">
+        <div>
+            <div class="page-kicker">Displays</div>
+            <h2>{{ vehicle_hangers_label }}</h2>
+            <div class="section-subtitle">Choose the physical display you want to manage.</div>
+        </div>
+    </div>
+
+    {% if esl_configuration_error %}
+    <div class="message error">{{ esl_configuration_error }}</div>
+    {% elif not esl_targets %}
+    <div class="placeholder">No displays are available right now.</div>
+    {% else %}
+    <div id="vehicleHangerFleet">
+        <div class="fleet-tools">
+            <label class="fleet-search">Search displays <input type="search" placeholder="Name or identifier" data-device-search></label>
+            <span class="fleet-count">{{ esl_targets|length }} available</span>
+        </div>
+        <div class="hanger-device-grid" aria-label="Available vehicle hanger displays" data-device-grid>
+            {% for target in esl_targets %}
+            {% set live = esl_live_by_target.get(target.id) %}
+            <a class="device-card hanger-device-card" href="{{ url_for('esl_device', target_id=target.id) }}" data-device-card data-search-text="{{ target.label }} {{ target.id }} 13.3 lumina">
+                <div class="device-meta hanger-device-head">
+                    <div>
+                        <span class="hanger-device-name">{{ target.label }}</span>
+                        <span class="hanger-device-type">13.3&quot; Lumina</span>
+                    </div>
+                    <span class="status accepted">Available</span>
+                </div>
+                <div class="hanger-device-details">
+                        <span>{{ target.id }}</span>
+                        <span>{{ target.width }} × {{ target.height }}</span>
+                </div>
+                <div class="live-pair hanger-state-grid">
+                    <div class="live-shot hanger-state live">
+                        <div class="hanger-state-label">LIVE</div>
+                        <div class="live-frame hanger-preview-frame">
+                            {% if live %}
+                            <img src="{{ url_for('esl_preview', target_id=target.id, filename=live.asset, v=live.batch_no or live.updated_at) }}"
+                                 alt="Live content on {{ target.label }}"
+                                 data-live-preview
+                                 data-preview-title="{{ target.label }} — Live">
+                            {% else %}
+                            <div class="hanger-preview-empty">No successful push recorded</div>
+                            {% endif %}
+                        </div>
+                        <div class="filename hanger-state-name" title="{{ live.asset if live else '' }}">{{ live.asset if live else 'No content recorded' }}</div>
+                        <div class="hanger-state-meta">{% if live and live.updated_at %}Accepted {{ live.updated_at }}{% else %}Physical state not confirmed{% endif %}</div>
+                    </div>
+                </div>
+                <span class="open-workspace">Manage display →</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="job-list">
+        <h3>Recent Display Activity</h3>
+        <div class="section-subtitle" style="margin-bottom:10px;">Recent requests made from Shyft Command.</div>
+        {% if push_jobs %}
+        <form class="job-bulk-form" id="activityBulkDeleteForm" action="{{ url_for('delete_esl_activities') }}" method="POST" onsubmit="return confirm('Remove the selected activity entries from Shyft Command history?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="job-bulk-actions">
+                <label class="job-select-all"><input id="activitySelectAll" type="checkbox"> Select all</label>
+                <button class="bulk-delete" id="activityBulkDelete" type="submit" disabled>Delete selected</button>
+            </div>
+        </form>
+        {% endif %}
+        {% for job in push_jobs %}
+        <div class="job-row with-selection">
+            <input class="job-check" form="activityBulkDeleteForm" type="checkbox" name="job_ids" value="{{ job.id }}" aria-label="Select {{ job.asset }} activity entry">
+            <div>
+                <strong>{{ job.asset }}</strong>
+                <div class="job-meta">{{ job.created_at }}</div>
+            </div>
+            <div>
+                {{ job.targets|map(attribute='label')|join(', ') }}
+                {% if job.events %}<div class="job-meta">{{ job.events|map(attribute='label')|join(' → ') }}</div>{% endif %}
+                {% if job.error %}<div class="job-meta">{{ job.error }}</div>{% endif %}
+            </div>
+            <div class="job-status job-status-actions">
+                <span class="status {{ job.status }}">{{ job.status_label }}</span>
+                <form action="{{ url_for('delete_esl_activity', job_id=job.id) }}" method="POST" onsubmit="return confirm('Remove this activity entry from Shyft Command history?')">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="history-delete" type="submit" title="Delete activity entry" aria-label="Delete activity entry">×</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty">No display updates have been submitted yet.</div>
+        {% endfor %}
+    </div>
+</section>
+{% elif page == "esl_workspace" %}
+<section class="device-shell">
+    <div>
+        <div class="section-head">
+            <div>
+                <h2>{{ esl_workspace.name }}</h2>
+                <div class="section-subtitle">{{ esl_workspace.model }} · {{ esl_workspace.id }} · {{ esl_workspace.width }} × {{ esl_workspace.height }} <span class="status accepted">Available</span></div>
+            </div>
+            <div class="device-actions">
+                <button class="secondary-action" type="button" onclick="previewStagedEsl()" {% if not esl_staged_file %}disabled{% endif %}>Preview</button>
+                <button class="push" type="button" onclick="openPushConfirmation()" {% if not esl_workspace.staged %}disabled{% endif %}>PUSH</button>
+            </div>
+        </div>
+
+        <div class="media-grid">
+            {% for file in files %}
+            {% set f = file.name %}
+            <div class="media-card">
+                {% if esl_workspace.live and f == esl_workspace.live.asset %}<div class="badge esl-live-banner">LIVE {{ esl_workspace.short_name }}</div>{% endif %}
+                {% if f == esl_workspace.staged %}<div class="badge esl-staged-banner">STAGED {{ esl_workspace.short_name }}</div>{% endif %}
+
+                <img class="thumb" src="{{ file.thumb_url }}" onerror="this.src='{{ file.normalised_url }}'" onclick="openPreview(this)"
+                     data-filename="{{ f }}" data-original="{{ file.original_url }}" data-normalised="{{ file.normalised_url }}"
+                     data-lcd="{{ file.lcd_url }}" data-eink="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=f) }}"
+                     {% if f == esl_workspace.staged %}data-staged-thumbnail{% endif %} alt="Preview of {{ f }}">
+
+                <span class="enlarge-hint">click to enlarge</span>
+                <p class="filename" title="{{ f }}">{{ f[:16] ~ '...' if f|length > 19 else f }}</p>
+
+                <div class="select-actions">
+                    <button class="lcd esl-action-spacer" type="button" tabindex="-1" aria-hidden="true">Select LCD</button>
+                    <form action="{{ url_for('stage_esl', target_id=esl_workspace.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="file" value="{{ f }}">
+                        <button class="eink">Stage</button>
+                    </form>
+                </div>
+            </div>
+            {% else %}<div class="empty">No media is available yet.</div>{% endfor %}
+        </div>
+    </div>
+
+    <aside class="live-panel">
+        <h3>Live Now</h3>
+        <div class="section-subtitle">{{ esl_workspace.name }}</div>
+        <div class="live-pair" style="margin-top:12px;">
+            <div class="live-shot">
+                <div class="live-frame">
+                    {% if esl_workspace.live %}<img src="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=esl_workspace.live.asset, v=esl_workspace.live.batch_no or esl_workspace.live.updated_at) }}" alt="Live content on {{ esl_workspace.name }}">
+                    {% else %}<span class="live-empty">Empty</span>{% endif %}
+                </div>
+                <span class="live-label">LIVE</span>
+                {% set live_name = esl_workspace.live.asset if esl_workspace.live else 'No content' %}
+                <p class="filename" title="{{ live_name }}">{{ live_name[:16] ~ '...' if live_name|length > 19 else live_name }}</p>
+            </div>
+        </div>
+    </aside>
+</section>
+
+<details class="activity-details" {% if push_jobs %}open{% endif %}><summary>Recent Display Activity</summary>
+    <div class="job-list">
+    {% for job in push_jobs %}<div class="job-row"><div><strong>{{ job.asset }}</strong><div class="job-meta">{{ job.created_at }}</div></div><div>{% if job.events %}{{ job.events|map(attribute='label')|join(' → ') }}{% endif %}</div><div class="job-status"><span class="status {{ job.status }}">{{ job.status_label }}</span></div></div>
+    {% else %}<div class="empty">No updates have been submitted for this display.</div>{% endfor %}
+    </div>
+</details>
+
+<div class="modal confirmation-modal" id="pushConfirmationModal" onclick="closePushConfirmation()">
+    <div class="modal-content confirmation-content" onclick="event.stopPropagation()">
+        <div class="preview-header">
+            <div><div class="page-kicker">Confirm deployment</div><div class="preview-title">Push to {{ esl_workspace.name }}?</div></div>
+            <button class="modal-close" type="button" onclick="closePushConfirmation()">X</button>
+        </div>
+        <p class="confirmation-copy">You are about to push:</p>
+        <strong class="confirmation-value">{{ esl_workspace.staged or 'Nothing staged' }}</strong>
+        <p class="confirmation-copy">to:</p>
+        <strong class="confirmation-value">{{ esl_workspace.name }}</strong>
+        <div class="confirmation-actions">
+            <button class="confirmation-cancel" type="button" onclick="closePushConfirmation()">Cancel</button>
+            <form action="{{ url_for('push_esl', target_id=esl_workspace.id) }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="push" {% if not esl_workspace.staged %}disabled{% endif %}>PUSH</button>
+            </form>
+        </div>
+    </div>
+</div>
 {% elif page == "media" %}
 <section>
     <div class="section-head">
         <div>
-            <h2>Content</h2>
+            <h2>Media</h2>
             <div class="section-subtitle">Uploaded content available for every device.</div>
         </div>
     </div>
@@ -719,6 +1180,7 @@ button:hover,
             <div>
                 <h2>{{ active_device.name }}</h2>
                 <div class="section-subtitle">
+                    {{ active_device.id }}
                     <span class="status {{ active_device.status }}">{{ active_device.status|capitalize }}</span>
                     {% if active_device.battery %} {{ active_device.battery }}{% endif %}
                     {% if active_device.last_seen %} Last seen {{ active_device.last_seen }}{% endif %}
@@ -726,9 +1188,9 @@ button:hover,
             </div>
             <div class="device-actions">
                 <button class="secondary-action" type="button" onclick="openDevicePreview()">Preview</button>
-                <form action="{{ url_for('push_device', device_id=active_device.id) }}" method="POST" onsubmit="return confirm('PUSH selected content to {{ active_device.name }}?')">
+                <form action="{{ url_for('push_device', device_id=active_device.id) }}" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="push">PUSH</button>
+                    <button class="push" {% if not active_device.selection.lcd and not active_device.selection.eink %}disabled{% endif %}>PUSH</button>
                 </form>
             </div>
         </div>
@@ -763,17 +1225,17 @@ button:hover,
                 <p class="filename" title="{{ f }}">{{ f }}</p>
 
                 <div class="select-actions">
-                    <form action="{{ url_for('select_lcd', device_id=active_device.id) }}" method="POST">
+                    {% if 'lcd' in active_device.screens %}<form action="{{ url_for('select_lcd', device_id=active_device.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="file" value="{{ f }}">
-                        <button class="lcd">Select LCD</button>
-                    </form>
+                        <button class="lcd">{% if f == active_device.selection.lcd %}STAGED for LCD{% else %}Stage for LCD{% endif %}</button>
+                    </form>{% endif %}
 
-                    <form action="{{ url_for('select_eink', device_id=active_device.id) }}" method="POST">
+                    {% if 'eink' in active_device.screens %}<form action="{{ url_for('select_eink', device_id=active_device.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="file" value="{{ f }}">
-                        <button class="eink">Select E-Ink</button>
-                    </form>
+                        <button class="eink">{% if f == active_device.selection.eink %}STAGED for E-Ink{% else %}Stage for E-Ink{% endif %}</button>
+                    </form>{% endif %}
                 </div>
             </div>
             {% else %}
@@ -820,10 +1282,12 @@ button:hover,
         </div>
     </div>
 
+    <div class="fleet-tools"><label class="fleet-search">Search devices <input type="search" placeholder="Name or identifier" data-device-search></label><span class="fleet-count">{{ devices|length }} registered</span></div>
+
     {% if devices %}
-    <div class="device-grid">
+    <div class="device-grid" data-device-grid>
         {% for device in devices %}
-        <a class="device-card" href="{{ url_for('device_control', device_id=device.id) }}">
+        <a class="device-card" href="{{ url_for('device_control', device_id=device.id) }}" data-device-card data-search-text="{{ device.name }} {{ device.id }} {{ device.screens.keys()|join(' ') }} {{ device.status }}">
             <div class="device-meta">
                 <div>
                     <h3>{{ device.name }}</h3>
@@ -1011,6 +1475,38 @@ function closePreview() {
     document.getElementById("previewModal").style.display = "none";
 }
 
+function previewStagedEsl() {
+    const staged = document.querySelector("[data-staged-thumbnail]");
+    if (staged) openPreview(staged);
+}
+
+function openPushConfirmation() {
+    const modal = document.getElementById("pushConfirmationModal");
+    if (modal) modal.style.display = "flex";
+}
+
+function closePushConfirmation() {
+    const modal = document.getElementById("pushConfirmationModal");
+    if (modal) modal.style.display = "none";
+}
+
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        closePreview();
+        closePushConfirmation();
+    }
+});
+
+function openHangerPreview(src, title) {
+    document.getElementById("previewModal").style.display = "flex";
+    document.getElementById("previewTitle").textContent = title;
+    setOriginalPreview(src);
+    document.getElementById("normalisedPreview").src = src;
+    document.getElementById("lcdPreview").src = src;
+    document.getElementById("einkPreview").src = src;
+    showPreviewTab("original");
+}
+
 function openDevicePreview() {
     document.getElementById("devicePreviewModal").style.display = "flex";
 }
@@ -1040,7 +1536,7 @@ function getFileExtension(fileName) {
     return parts.length > 1 ? parts.pop().toLowerCase() : "";
 }
 
-uploadFile.addEventListener("change", function () {
+if (uploadFile) uploadFile.addEventListener("change", function () {
     const fileName = this.files.length ? this.files[0].name : "No file chosen";
     uploadFileName.textContent = fileName;
     clearUploadError();
@@ -1062,7 +1558,7 @@ uploadFile.addEventListener("change", function () {
     }
 });
 
-document.getElementById("uploadForm").addEventListener("submit", function (event) {
+if (document.getElementById("uploadForm")) document.getElementById("uploadForm").addEventListener("submit", function (event) {
     clearUploadError();
 
     if (!uploadFile.files.length) {
@@ -1084,6 +1580,35 @@ document.getElementById("uploadForm").addEventListener("submit", function (event
         event.preventDefault();
         showUploadError("File too large. Maximum size is 5MB.");
     }
+});
+
+const activitySelectAll = document.getElementById("activitySelectAll");
+const activityBulkDelete = document.getElementById("activityBulkDelete");
+const activityChecks = Array.from(document.querySelectorAll(".job-check"));
+if (activitySelectAll && activityBulkDelete) {
+    function updateActivitySelection() {
+        const selectedCount = activityChecks.filter(function (check) { return check.checked; }).length;
+        activityBulkDelete.disabled = selectedCount === 0;
+        activityBulkDelete.textContent = selectedCount ? "Delete selected (" + selectedCount + ")" : "Delete selected";
+        activitySelectAll.checked = selectedCount === activityChecks.length && activityChecks.length > 0;
+        activitySelectAll.indeterminate = selectedCount > 0 && selectedCount < activityChecks.length;
+    }
+    activitySelectAll.addEventListener("change", function () {
+        activityChecks.forEach(function (check) { check.checked = activitySelectAll.checked; });
+        updateActivitySelection();
+    });
+    activityChecks.forEach(function (check) { check.addEventListener("change", updateActivitySelection); });
+}
+
+document.querySelectorAll("[data-device-search]").forEach(function (search) {
+    search.addEventListener("input", function () {
+        const query = search.value.trim().toLowerCase();
+        const grid = search.closest("section").querySelector("[data-device-grid]");
+        if (!grid) return;
+        grid.querySelectorAll("[data-device-card]").forEach(function (card) {
+            card.hidden = query && !card.dataset.searchText.toLowerCase().includes(query);
+        });
+    });
 });
 </script>
 
