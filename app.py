@@ -1125,19 +1125,25 @@ def screen_content_id(filename, screen, device):
         return None
 
     config = screen_config(device, screen)
+    content_config = {
+        "width": config["width"],
+        "height": config["height"],
+        "type": config.get("type"),
+        "color": config.get("color"),
+        "rotation": config["rotation"],
+    }
+    # Preserve the exact legacy Franky/Petey content-id payload. Adding the
+    # default monochrome profile here would make unchanged assignments look new
+    # to polling devices and could trigger an unintended physical refresh.
+    if config.get("render_profile") not in (None, "monochrome_eink"):
+        content_config["render_profile"] = config["render_profile"]
+
     payload = {
         "filename": filename,
         "source": version,
         "screen": screen,
         "rules": RENDER_RULE_VERSION,
-        "config": {
-            "width": config["width"],
-            "height": config["height"],
-            "type": config.get("type"),
-            "color": config.get("color"),
-            "rotation": config["rotation"],
-            "render_profile": config.get("render_profile", "monochrome_eink"),
-        },
+        "config": content_config,
     }
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:20]

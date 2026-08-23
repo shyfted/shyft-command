@@ -393,6 +393,41 @@ class EslRouteTests(unittest.TestCase):
             rendered = command.render_screen_image("source.png", "eink", device)
         self.assertEqual(rendered.mode, "1")
 
+    def test_default_profile_preserves_legacy_device_content_id(self):
+        legacy_device = {
+            "screens": {
+                "eink": {"type": "eink", "width": 800, "height": 480, "color": False}
+            }
+        }
+        explicit_monochrome = {
+            "screens": {
+                "eink": {
+                    "type": "eink",
+                    "width": 800,
+                    "height": 480,
+                    "color": False,
+                    "render_profile": "monochrome_eink",
+                }
+            }
+        }
+        lumina_device = {
+            "screens": {
+                "eink": {
+                    "type": "eink",
+                    "width": 800,
+                    "height": 480,
+                    "color": False,
+                    "render_profile": "lumina_six_colour",
+                }
+            }
+        }
+        with patch.object(command, "source_version", return_value="unchanged-source"):
+            legacy_id = command.screen_content_id("live.png", "eink", legacy_device)
+            monochrome_id = command.screen_content_id("live.png", "eink", explicit_monochrome)
+            lumina_id = command.screen_content_id("live.png", "eink", lumina_device)
+        self.assertEqual(legacy_id, monochrome_id)
+        self.assertNotEqual(legacy_id, lumina_id)
+
     def test_esl_preview_uses_existing_renderer_at_target_dimensions(self):
         rendered = BytesIO(b"preview-png")
         with (
