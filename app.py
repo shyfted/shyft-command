@@ -90,8 +90,9 @@ EINK_PDF_SAFE_MARGIN = 40
 EINK_PDF_RENDER_ZOOM = 4
 EINK_PDF_WHITE_THRESHOLD = 245
 EINK_PDF_CROP_PADDING = 20
-LUMINA_SIX_COLOUR_PROFILE = "lumina_six_colour"
-LUMINA_SIX_COLOUR_PALETTE = (
+SIX_COLOUR_EINK_PROFILE = "six_colour_eink"
+SIX_COLOUR_EINK_PROFILES = {SIX_COLOUR_EINK_PROFILE, "lumina_six_colour"}
+SIX_COLOUR_EINK_PALETTE = (
     (0, 0, 0),
     (255, 255, 255),
     (255, 0, 0),
@@ -99,6 +100,9 @@ LUMINA_SIX_COLOUR_PALETTE = (
     (0, 0, 255),
     (0, 255, 0),
 )
+# Backwards-compatible names for existing Lumina configuration and callers.
+LUMINA_SIX_COLOUR_PROFILE = "lumina_six_colour"
+LUMINA_SIX_COLOUR_PALETTE = SIX_COLOUR_EINK_PALETTE
 
 
 def allowed_file(filename):
@@ -689,6 +693,7 @@ def list_uploads():
         version = source_version(filename)
         files.append({
             "name": filename,
+            "original_name": (catalog.get(filename) or {}).get("original") or filename,
             "version": version,
             "thumb_url": preview_upload_url("thumb", filename, version),
             "original_url": original_preview_url(filename, catalog, version),
@@ -707,6 +712,7 @@ def list_uploads():
             version = source_version(filename)
             files.append({
                 "name": filename,
+                "original_name": (catalog.get(filename) or {}).get("original") or filename,
                 "version": version,
                 "thumb_url": preview_upload_url("thumb", filename, version),
                 "original_url": original_preview_url(filename, catalog, version),
@@ -725,6 +731,7 @@ def list_uploads():
         version = source_version(filename)
         files.append({
             "name": filename,
+            "original_name": filename,
             "version": version,
             "thumb_url": preview_upload_url("thumb", filename, version),
             "original_url": versioned_upload_url(filename, version),
@@ -1040,7 +1047,7 @@ def render_screen_image(filename, screen, device=None, render_context=None, outp
     if not source_path:
         abort(404)
 
-    if config.get("render_profile") == LUMINA_SIX_COLOUR_PROFILE:
+    if config.get("render_profile") in SIX_COLOUR_EINK_PROFILES:
         return render_lumina_six_colour(
             source_path,
             size,
@@ -1726,20 +1733,20 @@ def media():
 
 
 def customer_esl_targets():
-    """Return only the two approved 13.3-inch Luminas for ESL Updates v1."""
+    """Return supported, explicitly allowed showroom ESL targets."""
     configured = targets_from_environment()
     allowed_ids = {
         item.strip()
         for item in os.environ.get("SHYFT_ESL_UI_TARGET_IDS", "").split(",")
         if item.strip()
     }
+    supported_sizes = {(1600, 1200), (672, 960)}
     eligible = [
         target
         for target in configured
-        if target.width == 1600
-        and target.height == 1200
+        if (target.width, target.height) in supported_sizes
         and (not allowed_ids or target.id in allowed_ids)
-    ][:2]
+    ]
     return [
         type(target)(
             id=target.id,
@@ -1751,6 +1758,134 @@ def customer_esl_targets():
             render_profile=target.render_profile,
         )
         for index, target in enumerate(eligible, start=1)
+    ]
+
+
+def esl_profile_key(target):
+    if (target.width, target.height) == (672, 960):
+        return "nebular_9_7"
+    if (target.width, target.height) == (1600, 1200):
+        return "lumina_13_3"
+    return "unsupported"
+
+
+def esl_render_device(target, render_mode=None):
+    if render_mode not in (None, "bw", "six_colour"):
+        raise ValueError("Unsupported ESL render treatment")
+    render_profile = target.render_profile
+    if render_mode == "bw":
+        render_profile = "monochrome_eink"
+    elif render_mode == "six_colour":
+        render_profile = SIX_COLOUR_EINK_PROFILE
+    return {
+        "screens": {
+            "eink": {
+                "type": "eink",
+                "width": target.width,
+                "height": target.height,
+                "color": False,
+                "orientation": target.rotation,
+                "render_profile": render_profile,
+            }
+        }
+    }
+
+
+def esl_media_compatibility(filename, target):
+    """Cheap, target-aware preflight used by staging and workspace UX."""
+    source_path = existing_source_path(filename)
+    if not source_path:
+        return {"compatible": False, "reason": "The source file is missing."}
+
+    profile = esl_profile_key(target)
+    allowed_profiles = (get_media_catalog().get(filename) or {}).get("esl_profiles")
+    if allowed_profiles and profile not in allowed_profiles:
+        return {"compatible": False, "reason": "This media was prepared for a different display family."}
+
+    extension = get_extension(source_path)
+    if extension not in ALLOWED_EXTENSIONS:
+        return {"compatible": False, "reason": "Unsupported file type; use PNG, JPG, JPEG, or PDF."}
+
+    try:
+        if extension == "pdf":
+            with fitz.open(source_path) as document:
+                if document.page_count < 1:
+                    raise ValueError("PDF has no pages")
+                rectangle = document.load_page(0).rect
+                source_width, source_height = rectangle.width, rectangle.height
+        else:
+            with Image.open(source_path) as source:
+                source.verify()
+            with Image.open(source_path) as source:
+                source_width, source_height = source.size
+                source.load()
+    except Exception:
+        return {"compatible": False, "reason": "The media file is corrupt or unreadable."}
+
+    if source_width <= 0 or source_height <= 0:
+        return {"compatible": False, "reason": "The media has invalid dimensions."}
+
+    target_width, target_height = target.width, target.height
+    if target.rotation in (90, 270):
+        target_width, target_height = target_height, target_width
+    source_ratio = source_width / source_height
+    target_ratio = target_width / target_height
+    fitted_area_ratio = min(source_ratio / target_ratio, target_ratio / source_ratio)
+    if fitted_area_ratio < 0.35:
+        return {
+            "compatible": False,
+            "reason": "The aspect ratio is too different to fit this display safely.",
+        }
+
+    exact_dimensions = (round(source_width), round(source_height)) == (target_width, target_height)
+    return {
+        "compatible": True,
+        "reason": (
+            "Ready at the display's native dimensions."
+            if exact_dimensions
+            else f"Command will safely fit this media to {target.width} × {target.height}."
+        ),
+    }
+
+
+def validate_rendered_esl_payload(rendered_bytes, target):
+    """Final payload gate immediately before the Hanshow adapter."""
+    if not rendered_bytes or len(rendered_bytes) > MAX_FILE_SIZE:
+        raise ValueError("Rendered ESL payload has an invalid size")
+    try:
+        with Image.open(BytesIO(rendered_bytes)) as rendered:
+            rendered.load()
+            if rendered.format != "PNG" or rendered.size != (target.width, target.height):
+                raise ValueError("Rendered ESL payload does not match the target profile")
+    except (OSError, ValueError) as error:
+        raise ValueError("Rendered ESL payload is invalid") from error
+
+
+def esl_media_requires_preview_acknowledgement(filename, target):
+    """Detect meaningful colour complexity while ignoring JPEG edge noise."""
+    if target.render_profile not in SIX_COLOUR_EINK_PROFILES:
+        return False
+    source_path = existing_source_path(filename)
+    if not source_path:
+        return True
+    try:
+        source = load_source_image(source_path).convert("RGB")
+        source.thumbnail((256, 256), Image.Resampling.LANCZOS)
+        representative = source.quantize(colors=32, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+        minimum_material_pixels = max(1, round(source.width * source.height * 0.005))
+        material_colours = sum(
+            1 for count, _index in (representative.getcolors(maxcolors=32) or [])
+            if count >= minimum_material_pixels
+        )
+        return material_colours > 6
+    except (OSError, ValueError):
+        return True
+
+
+def esl_files_for_target(files, target):
+    return [
+        {**file, "esl_compatibility": esl_media_compatibility(file["name"], target)}
+        for file in files
     ]
 
 
@@ -1802,16 +1937,27 @@ def clear_esl_staged_asset(target_id, filename=None):
 def esl_target_workspace(target, push_jobs):
     live = esl_live_state(push_jobs, [target]).get(target.id)
     display_number = target.label.rsplit(" ", 1)[-1]
+    staged = get_esl_staged_asset(target.id)
+    staged_compatibility = esl_media_compatibility(staged, target) if staged else None
     return {
         "id": target.id,
         "name": target.label,
-        "model": '13.3" Lumina',
+        "model": (
+            '9.7" Nebular Pro'
+            if (target.width, target.height) == (672, 960)
+            else '13.3" Lumina'
+        ),
         "width": target.width,
         "height": target.height,
         "status": "available",
         "short_name": f"S-ROOM {display_number}",
         "live": live,
-        "staged": get_esl_staged_asset(target.id),
+        "staged": staged,
+        "staged_compatible": bool(staged_compatibility and staged_compatibility["compatible"]),
+        "staged_requires_preview_acknowledgement": bool(
+            staged and staged_compatibility and staged_compatibility["compatible"]
+            and esl_media_requires_preview_acknowledgement(staged, target)
+        ),
     }
 
 
@@ -1853,7 +1999,7 @@ def esl_device(target_id):
         return redirect(url_for("esl"))
 
     push_jobs = get_push_jobs()
-    files = list_uploads()
+    files = esl_files_for_target(list_uploads(), target)
     workspace = esl_target_workspace(target, push_jobs)
     staged_file = next((item for item in files if item.get("name") == workspace["staged"]), None)
     target_jobs = [
@@ -1890,6 +2036,21 @@ def stage_esl(target_id):
     if not filename or not upload_exists(filename):
         flash("Choose valid content for this display.", "error")
         return redirect(url_for("esl_device", target_id=target_id))
+    compatibility = esl_media_compatibility(filename, target)
+    if not compatibility["compatible"]:
+        flash(f"This media cannot be staged: {compatibility['reason']}", "error")
+        return redirect(url_for("esl_device", target_id=target_id))
+    try:
+        rendered, _mimetype, _extension = render_for_screen(
+            filename,
+            "eink",
+            esl_render_device(target),
+            render_context=f"esl-stage/{target.id}",
+        )
+        validate_rendered_esl_payload(rendered.getvalue(), target)
+    except (OSError, ValueError):
+        flash("This media could not be safely prepared for the selected display.", "error")
+        return redirect(url_for("esl_device", target_id=target_id))
 
     set_esl_staged_asset(target_id, filename)
     flash(f"Staged {filename} for {target.label}.", "success")
@@ -1908,18 +2069,11 @@ def esl_preview(target_id, filename):
         target = None
     if not target:
         abort(404)
-    device = {
-        "screens": {
-            "eink": {
-                "type": "eink",
-                "width": target.width,
-                "height": target.height,
-                "color": False,
-                "orientation": target.rotation,
-                "render_profile": target.render_profile,
-            }
-        }
-    }
+    render_mode = (request.args.get("render_mode") or "six_colour").strip()
+    try:
+        device = esl_render_device(target, render_mode)
+    except ValueError:
+        abort(400)
     output, mimetype, _extension = render_for_screen(
         filename,
         "eink",
@@ -1940,6 +2094,10 @@ def push_esl(target_id=None):
     if not filename:
         filename = clean_filename(request.form.get("file"))
     redirect_target = url_for("esl_device", target_id=target_id) if target_id else url_for("esl")
+    render_mode = (request.form.get("render_mode") or "six_colour").strip()
+    if render_mode not in {"bw", "six_colour"}:
+        flash("Choose B&W or BWGRYB rendering before pushing.", "error")
+        return redirect(redirect_target)
 
     if not filename or not upload_exists(filename):
         flash("Choose valid content before updating the display.", "error")
@@ -1953,6 +2111,17 @@ def push_esl(target_id=None):
     target = next((item for item in targets if item.id == target_id), None)
     if not target:
         flash("Choose an available display.", "error")
+        return redirect(redirect_target)
+    compatibility = esl_media_compatibility(filename, target)
+    if not compatibility["compatible"]:
+        flash(f"This media cannot be pushed: {compatibility['reason']}", "error")
+        return redirect(redirect_target)
+    if (
+        render_mode == "six_colour"
+        and esl_media_requires_preview_acknowledgement(filename, target)
+        and request.form.get("preview_acknowledged") != "yes"
+    ):
+        flash("Review the posterised display preview and confirm you are happy with it before pushing.", "error")
         return redirect(redirect_target)
 
     job_id = secrets.token_hex(12)
@@ -1969,18 +2138,7 @@ def push_esl(target_id=None):
     }
     record_push_job(job)
 
-    render_device = {
-        "screens": {
-            "eink": {
-                "type": "eink",
-                "width": target.width,
-                "height": target.height,
-                "color": False,
-                "orientation": target.rotation,
-                "render_profile": target.render_profile,
-            }
-        }
-    }
+    render_device = esl_render_device(target, render_mode)
     try:
         rendered, _mimetype, _extension = render_for_screen(
             filename,
@@ -2000,7 +2158,9 @@ def push_esl(target_id=None):
             status_label="Sending",
             updated_at=utc_timestamp(),
         )
-        result = submit_esl_push(rendered.getvalue(), [target])
+        rendered_bytes = rendered.getvalue()
+        validate_rendered_esl_payload(rendered_bytes, target)
+        result = submit_esl_push(rendered_bytes, [target])
         update_push_job(
             job_id,
             status="accepted",
@@ -2039,7 +2199,10 @@ def delete_esl_activity(job_id):
     if not hide_push_job_from_history(job_id):
         abort(404)
     flash("Removed the activity entry from Shyft Command history.", "success")
-    return redirect(url_for("esl"))
+    next_url = (request.form.get("next") or url_for("esl")).strip()
+    if not next_url.startswith("/esl") or next_url.startswith("//"):
+        next_url = url_for("esl")
+    return redirect(next_url)
 
 
 @app.route("/esl/activity/delete", methods=["POST"])
@@ -2053,7 +2216,10 @@ def delete_esl_activities():
     else:
         noun = "entry" if removed == 1 else "entries"
         flash(f"Removed {removed} activity {noun} from Shyft Command history.", "success")
-    return redirect(url_for("esl"))
+    next_url = (request.form.get("next") or url_for("esl")).strip()
+    if not next_url.startswith("/esl") or next_url.startswith("//"):
+        next_url = url_for("esl")
+    return redirect(next_url)
 
 
 @app.route("/settings")
@@ -2468,7 +2634,7 @@ def delete():
     f = clean_filename(request.form.get("file"))
     if not f:
         flash("Choose a file to delete.", "error")
-        return redirect("/")
+        return redirect(url_for("media"))
 
     catalog = get_media_catalog()
     original = (catalog.get(f) or {}).get("original")
@@ -2503,7 +2669,7 @@ def delete():
     else:
         flash(f"{f} was not found.", "error")
 
-    return redirect("/")
+    return redirect(url_for("media"))
 
 
 @app.route("/preview/<variant>/<path:filename>")

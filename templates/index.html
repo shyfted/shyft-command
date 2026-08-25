@@ -154,6 +154,8 @@ button {
     display:flex;
     gap:10px;
 }
+.render-treatment { color:#94a3b8; display:flex; flex-direction:column; font-size:10px; font-weight:800; gap:3px; text-transform:uppercase; }
+.render-treatment select { background:#202838; border:1px solid #3a465c; border-radius:7px; color:#f4f7fb; font-family:inherit; font-size:12px; font-weight:700; padding:8px 28px 8px 9px; text-transform:none; }
 
 button {
     color:#172033;
@@ -360,6 +362,9 @@ button:hover,
     padding:8px;
     position:relative;
 }
+.media-card.is-incompatible { border-color:#69404a; opacity:.72; }
+.compatibility-note { color:#9aa6b8; font-size:10px; line-height:1.35; margin:6px 0; }
+.compatibility-note.blocked { color:#f5bec6; }
 
 .thumb {
     background:#566171;
@@ -591,10 +596,21 @@ button:hover,
 .esl-action-spacer { pointer-events:none; visibility:hidden; }
 .activity-details { border-top:1px solid #2a3344; margin-top:28px; padding-top:16px; }
 .activity-details summary { cursor:pointer; font-size:16px; font-weight:900; }
-.confirmation-content { max-width:520px; }
-.confirmation-copy { color:#94a3b8; font-size:13px; margin:18px 0 6px; }
-.confirmation-value { color:#f4f7fb; display:block; font-size:16px; overflow-wrap:anywhere; }
-.confirmation-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:24px; }
+.confirmation-content { max-width:620px; padding:16px; }
+.confirmation-content .preview-header { margin-bottom:8px; }
+.confirmation-content .page-kicker { margin-bottom:2px; }
+.confirmation-content .preview-title { font-size:18px; }
+.confirmation-summary { background:#111827; border:1px solid #2f3b50; border-radius:8px; display:grid; font-size:12px; gap:5px; grid-template-columns:52px minmax(0, 1fr); margin-top:8px; padding:8px 10px; }
+.confirmation-summary span { color:#94a3b8; font-weight:700; }
+.confirmation-summary strong { color:#f4f7fb; overflow-wrap:anywhere; }
+.confirmation-preview { background:#111827; border:1px solid #344158; border-radius:10px; margin-top:9px; padding:8px; text-align:center; }
+.confirmation-preview img { background:#fff; display:block; margin:auto; max-height:40vh; max-width:88%; object-fit:contain; }
+.confirmation-disclaimer { background:#292515; border:1px solid #665a28; border-radius:10px; margin:12px 0; padding:12px; }
+.confirmation-warning { color:#fbbf24; font-size:13px; line-height:1.45; margin:0 0 10px; }
+.confirmation-disclaimer .render-treatment { color:#d8c987; }
+.confirmation-acknowledgement { align-items:flex-start; color:#dbe4f3; cursor:pointer; display:flex; font-size:14px; gap:9px; line-height:1.4; }
+.confirmation-acknowledgement input { margin-top:3px; }
+.confirmation-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:14px; }
 .confirmation-actions form { margin:0; }
 .confirmation-actions button { min-width:110px; }
 .confirmation-cancel { background:#30384a; color:#dbe4f3; }
@@ -650,8 +666,8 @@ button:hover,
 .job-meta { color:#94a3b8; font-size:11px; margin-top:4px; }
 .job-status { text-align:right; }
 .job-status-actions { align-items:center; display:flex; gap:7px; justify-content:flex-end; }
-.history-delete { background:transparent; color:#748196; font-size:15px; line-height:1; padding:2px 4px; width:auto; }
-.history-delete:hover { color:#f5bec6; }
+.history-delete { background:#35232a; border:1px solid #70404c; border-radius:6px; color:#f3b5bf; font-size:12px; font-weight:700; line-height:1; padding:7px 9px; width:auto; }
+.history-delete:hover { background:#4a2932; border-color:#a65362; color:#fff; }
 .job-list-head { align-items:end; display:flex; gap:12px; justify-content:space-between; }
 .job-bulk-form { margin:0; }
 .job-bulk-actions { align-items:center; display:flex; gap:9px; justify-content:flex-end; margin:4px 0 8px; }
@@ -706,6 +722,7 @@ button:hover,
     text-overflow:ellipsis;
     white-space:nowrap;
 }
+.preview-source-note { color:#94a3b8; font-size:12px; margin-top:4px; }
 
 .preview-tabs {
     display:grid;
@@ -982,11 +999,12 @@ button:hover,
         <div class="hanger-device-grid" aria-label="Available vehicle hanger displays" data-device-grid>
             {% for target in esl_targets %}
             {% set live = esl_live_by_target.get(target.id) %}
-            <a class="device-card hanger-device-card" href="{{ url_for('esl_device', target_id=target.id) }}" data-device-card data-search-text="{{ target.label }} {{ target.id }} 13.3 lumina">
+            {% set target_model = '9.7" Nebular Pro' if target.width == 672 and target.height == 960 else '13.3" Lumina' %}
+            <a class="device-card hanger-device-card" href="{{ url_for('esl_device', target_id=target.id) }}" data-device-card data-search-text="{{ target.label }} {{ target.id }} {{ target_model }}">
                 <div class="device-meta hanger-device-head">
                     <div>
                         <span class="hanger-device-name">{{ target.label }}</span>
-                        <span class="hanger-device-type">13.3&quot; Lumina</span>
+                        <span class="hanger-device-type">{% if target.width == 672 and target.height == 960 %}9.7&quot; Nebular Pro{% else %}13.3&quot; Lumina{% endif %}</span>
                     </div>
                     <span class="status accepted">Available</span>
                 </div>
@@ -1046,7 +1064,7 @@ button:hover,
                 <span class="status {{ job.status }}">{{ job.status_label }}</span>
                 <form action="{{ url_for('delete_esl_activity', job_id=job.id) }}" method="POST" onsubmit="return confirm('Remove this activity entry from Shyft Command history?')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="history-delete" type="submit" title="Delete activity entry" aria-label="Delete activity entry">×</button>
+                    <button class="history-delete" type="submit" title="Delete activity entry" aria-label="Delete activity entry">Delete</button>
                 </form>
             </div>
         </div>
@@ -1064,32 +1082,41 @@ button:hover,
                 <div class="section-subtitle">{{ esl_workspace.model }} · {{ esl_workspace.id }} · {{ esl_workspace.width }} × {{ esl_workspace.height }} <span class="status accepted">Available</span></div>
             </div>
             <div class="device-actions">
+                <label class="render-treatment">Render as
+                    <select id="eslRenderMode" onchange="updateEslRenderMode(this.value)">
+                        <option value="bw">B&amp;W</option>
+                        <option value="six_colour" selected>BWGRYB</option>
+                    </select>
+                </label>
                 <button class="secondary-action" type="button" onclick="previewStagedEsl()" {% if not esl_staged_file %}disabled{% endif %}>Preview</button>
-                <button class="push" type="button" onclick="openPushConfirmation()" {% if not esl_workspace.staged %}disabled{% endif %}>PUSH</button>
+                <button class="push" type="button" onclick="pushStagedEsl()" data-requires-preview="{{ 'true' if esl_workspace.staged_requires_preview_acknowledgement else 'false' }}" {% if not esl_workspace.staged or not esl_workspace.staged_compatible %}disabled{% endif %}>PUSH</button>
             </div>
         </div>
 
         <div class="media-grid">
             {% for file in files %}
             {% set f = file.name %}
-            <div class="media-card">
+            <div class="media-card{% if not file.esl_compatibility.compatible %} is-incompatible{% endif %}">
                 {% if esl_workspace.live and f == esl_workspace.live.asset %}<div class="badge esl-live-banner">LIVE {{ esl_workspace.short_name }}</div>{% endif %}
                 {% if f == esl_workspace.staged %}<div class="badge esl-staged-banner">STAGED {{ esl_workspace.short_name }}</div>{% endif %}
 
                 <img class="thumb" src="{{ file.thumb_url }}" onerror="this.src='{{ file.normalised_url }}'" onclick="openPreview(this)"
-                     data-filename="{{ f }}" data-original="{{ file.original_url }}" data-normalised="{{ file.normalised_url }}"
-                     data-lcd="{{ file.lcd_url }}" data-eink="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=f) }}"
+                     data-filename="{{ f }}" data-original-name="{{ file.original_name }}" data-original="{{ file.original_url }}" data-normalised="{{ file.normalised_url }}"
+                     data-lcd="{{ file.lcd_url }}" data-eink="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=f, render_mode='six_colour') }}"
+                     data-eink-bw="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=f, render_mode='bw') }}"
+                     data-eink-six-colour="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=f, render_mode='six_colour') }}"
                      {% if f == esl_workspace.staged %}data-staged-thumbnail{% endif %} alt="Preview of {{ f }}">
 
                 <span class="enlarge-hint">click to enlarge</span>
                 <p class="filename" title="{{ f }}">{{ f[:16] ~ '...' if f|length > 19 else f }}</p>
+                <div class="compatibility-note{% if not file.esl_compatibility.compatible %} blocked{% endif %}">{{ file.esl_compatibility.reason }}</div>
 
                 <div class="select-actions">
                     <button class="lcd esl-action-spacer" type="button" tabindex="-1" aria-hidden="true">Select LCD</button>
                     <form action="{{ url_for('stage_esl', target_id=esl_workspace.id) }}" method="POST">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="file" value="{{ f }}">
-                        <button class="eink">Stage</button>
+                        <button class="eink" {% if not file.esl_compatibility.compatible %}disabled title="{{ file.esl_compatibility.reason }}"{% endif %}>Stage</button>
                     </form>
                 </div>
             </div>
@@ -1116,7 +1143,17 @@ button:hover,
 
 <details class="activity-details" {% if push_jobs %}open{% endif %}><summary>Recent Display Activity</summary>
     <div class="job-list">
-    {% for job in push_jobs %}<div class="job-row"><div><strong>{{ job.asset }}</strong><div class="job-meta">{{ job.created_at }}</div></div><div>{% if job.events %}{{ job.events|map(attribute='label')|join(' → ') }}{% endif %}</div><div class="job-status"><span class="status {{ job.status }}">{{ job.status_label }}</span></div></div>
+    {% if push_jobs %}
+    <form class="job-bulk-form" id="activityBulkDeleteForm" action="{{ url_for('delete_esl_activities') }}" method="POST" onsubmit="return confirm('Remove the selected activity entries from Shyft Command history?')">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ url_for('esl_device', target_id=esl_workspace.id) }}">
+        <div class="job-bulk-actions">
+            <label class="job-select-all"><input id="activitySelectAll" type="checkbox"> Select all</label>
+            <button class="bulk-delete" id="activityBulkDelete" type="submit" disabled>Delete selected</button>
+        </div>
+    </form>
+    {% endif %}
+    {% for job in push_jobs %}<div class="job-row with-selection"><input class="job-check" form="activityBulkDeleteForm" type="checkbox" name="job_ids" value="{{ job.id }}" aria-label="Select {{ job.asset }} activity entry"><div><strong>{{ job.asset }}</strong><div class="job-meta">{{ job.created_at }}</div></div><div>{% if job.events %}{{ job.events|map(attribute='label')|join(' → ') }}{% endif %}</div><div class="job-status job-status-actions"><span class="status {{ job.status }}">{{ job.status_label }}</span><form action="{{ url_for('delete_esl_activity', job_id=job.id) }}" method="POST" onsubmit="return confirm('Remove this activity entry from Shyft Command history?')"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="{{ url_for('esl_device', target_id=esl_workspace.id) }}"><button class="history-delete" type="submit" title="Delete activity entry" aria-label="Delete activity entry">Delete</button></form></div></div>
     {% else %}<div class="empty">No updates have been submitted for this display.</div>{% endfor %}
     </div>
 </details>
@@ -1127,15 +1164,35 @@ button:hover,
             <div><div class="page-kicker">Confirm deployment</div><div class="preview-title">Push to {{ esl_workspace.name }}?</div></div>
             <button class="modal-close" type="button" onclick="closePushConfirmation()">X</button>
         </div>
-        <p class="confirmation-copy">You are about to push:</p>
-        <strong class="confirmation-value">{{ esl_workspace.staged or 'Nothing staged' }}</strong>
-        <p class="confirmation-copy">to:</p>
-        <strong class="confirmation-value">{{ esl_workspace.name }}</strong>
+        <div class="confirmation-summary">
+            <span>Media</span><strong>{{ esl_workspace.staged or 'Nothing staged' }}</strong>
+            <span>Target</span><strong>{{ esl_workspace.name }}</strong>
+        </div>
+        {% if esl_workspace.staged %}
+        <div class="confirmation-preview">
+            <img id="pushConfirmationPreview" src="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=esl_workspace.staged, render_mode='six_colour') }}" data-preview-bw="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=esl_workspace.staged, render_mode='bw') }}" data-preview-six-colour="{{ url_for('esl_preview', target_id=esl_workspace.id, filename=esl_workspace.staged, render_mode='six_colour') }}" alt="Final rendered preview for {{ esl_workspace.name }}">
+        </div>
+        <div class="confirmation-disclaimer">
+            <p class="confirmation-warning" id="pushConfirmationWarning">This source contains more than six colours and will be posterised. Review this target-specific preview carefully before pushing.</p>
+            <label class="render-treatment">Render as
+                <select id="confirmationRenderMode" onchange="updateEslRenderMode(this.value)">
+                    <option value="bw">B&amp;W</option>
+                    <option value="six_colour" selected>BWGRYB</option>
+                </select>
+            </label>
+        </div>
+        {% endif %}
+        <label class="confirmation-acknowledgement" id="pushPreviewAcknowledgementLabel">
+            <input id="pushPreviewAcknowledgement" type="checkbox" onchange="updatePushConfirmation()">
+            <span>I have reviewed this preview and am happy to push the image as shown.</span>
+        </label>
         <div class="confirmation-actions">
             <button class="confirmation-cancel" type="button" onclick="closePushConfirmation()">Cancel</button>
-            <form action="{{ url_for('push_esl', target_id=esl_workspace.id) }}" method="POST">
+            <form id="confirmedPushForm" action="{{ url_for('push_esl', target_id=esl_workspace.id) }}" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="push" {% if not esl_workspace.staged %}disabled{% endif %}>PUSH</button>
+                <input id="pushPreviewAcknowledgedValue" type="hidden" name="preview_acknowledged" value="">
+                <input id="pushRenderModeValue" type="hidden" name="render_mode" value="six_colour">
+                <button id="confirmedPushButton" class="push" disabled>PUSH</button>
             </form>
         </div>
     </div>
@@ -1156,6 +1213,7 @@ button:hover,
                  onerror="this.src='{{ file.normalised_url }}'"
                  onclick="openPreview(this)"
                  data-filename="{{ f }}"
+                 data-original-name="{{ file.original_name }}"
                  data-original="{{ file.original_url }}"
                  data-normalised="{{ file.normalised_url }}"
                  data-lcd="{{ file.lcd_url }}"
@@ -1165,6 +1223,7 @@ button:hover,
             <form action="{{ url_for('delete') }}" method="POST" onsubmit="return confirm('Delete this file?')">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="file" value="{{ f }}">
+                <input type="hidden" name="next" value="{{ url_for('media') }}">
                 <button class="del">Delete</button>
             </form>
         </div>
@@ -1216,6 +1275,7 @@ button:hover,
                      onerror="this.src='{{ file.normalised_url }}'"
                      onclick="openPreview(this)"
                      data-filename="{{ f }}"
+                     data-original-name="{{ file.original_name }}"
                      data-original="{{ file.original_url }}"
                      data-normalised="{{ file.normalised_url }}"
                      data-lcd="{{ file.lcd_url }}"
@@ -1333,7 +1393,7 @@ button:hover,
 <div class="modal" id="previewModal" onclick="closePreview()">
     <div class="modal-content" onclick="event.stopPropagation()">
         <div class="preview-header">
-            <div class="preview-title" id="previewTitle"></div>
+            <div><div class="preview-title" id="previewTitle"></div><div class="preview-source-note" id="previewSourceNote"></div></div>
             <button class="modal-close" type="button" onclick="closePreview()">X</button>
         </div>
 
@@ -1464,6 +1524,11 @@ function setOriginalPreview(src) {
 function openPreview(trigger) {
     document.getElementById("previewModal").style.display = "flex";
     document.getElementById("previewTitle").textContent = trigger.dataset.filename;
+    const originalName = trigger.dataset.originalName || trigger.dataset.filename;
+    const sourceNote = document.getElementById("previewSourceNote");
+    sourceNote.textContent = originalName !== trigger.dataset.filename
+        ? "Original source: " + originalName + " — displayed with Chrome's PDF viewer"
+        : "";
     setOriginalPreview(trigger.dataset.original);
     document.getElementById("normalisedPreview").src = trigger.dataset.normalised;
     document.getElementById("lcdPreview").src = trigger.dataset.lcd;
@@ -1480,9 +1545,66 @@ function previewStagedEsl() {
     if (staged) openPreview(staged);
 }
 
+function updateEslRenderMode(requestedMode) {
+    const select = document.getElementById("eslRenderMode");
+    const confirmationSelect = document.getElementById("confirmationRenderMode");
+    const staged = document.querySelector("[data-staged-thumbnail]");
+    const hidden = document.getElementById("pushRenderModeValue");
+    const confirmationPreview = document.getElementById("pushConfirmationPreview");
+    if (!select) return;
+    const mode = requestedMode || select.value;
+    select.value = mode;
+    if (confirmationSelect) confirmationSelect.value = mode;
+    if (hidden) hidden.value = mode;
+    const suffix = mode === "bw" ? "Bw" : "SixColour";
+    if (staged && staged.dataset["eink" + suffix]) staged.dataset.eink = staged.dataset["eink" + suffix];
+    if (confirmationPreview) confirmationPreview.src = mode === "bw"
+        ? confirmationPreview.dataset.previewBw
+        : confirmationPreview.dataset.previewSixColour;
+    const warning = document.getElementById("pushConfirmationWarning");
+    if (warning) warning.textContent = mode === "bw"
+        ? "B&W uses monochrome dithering to preserve apparent shading. Review the updated preview before pushing."
+        : "This source contains more than six colours and will be posterised. Review this target-specific preview carefully before pushing.";
+    updatePushConfirmation();
+}
+
 function openPushConfirmation() {
     const modal = document.getElementById("pushConfirmationModal");
+    const acknowledgement = document.getElementById("pushPreviewAcknowledgement");
+    if (acknowledgement) acknowledgement.checked = false;
+    updateEslRenderMode();
+    updatePushConfirmation();
     if (modal) modal.style.display = "flex";
+}
+
+function pushStagedEsl() {
+    const trigger = document.querySelector("[data-requires-preview]");
+    const form = document.getElementById("confirmedPushForm");
+    if (!trigger || !form) return;
+    const renderMode = document.getElementById("eslRenderMode");
+    updateEslRenderMode();
+    if (renderMode && renderMode.value === "six_colour" && trigger.dataset.requiresPreview === "true") {
+        openPushConfirmation();
+    } else {
+        form.submit();
+    }
+}
+
+function updatePushConfirmation() {
+    const acknowledgement = document.getElementById("pushPreviewAcknowledgement");
+    const value = document.getElementById("pushPreviewAcknowledgedValue");
+    const button = document.getElementById("confirmedPushButton");
+    const label = document.getElementById("pushPreviewAcknowledgementLabel");
+    const trigger = document.querySelector("[data-requires-preview]");
+    const renderMode = document.getElementById("eslRenderMode");
+    const needsAcknowledgement = Boolean(
+        trigger && trigger.dataset.requiresPreview === "true"
+        && renderMode && renderMode.value === "six_colour"
+    );
+    const confirmed = Boolean(acknowledgement && acknowledgement.checked);
+    if (label) label.hidden = !needsAcknowledgement;
+    if (value) value.value = needsAcknowledgement && confirmed ? "yes" : "";
+    if (button) button.disabled = needsAcknowledgement && !confirmed;
 }
 
 function closePushConfirmation() {

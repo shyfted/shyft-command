@@ -72,10 +72,47 @@ class HanshowIntegrationTests(unittest.TestCase):
         value = '[{"id":"lumina","label":"Lumina","sku":"SKU-1","width":1600,"height":1200,"render_profile":"lumina_six_colour"}]'
         with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": value}):
             self.assertEqual(targets_from_environment()[0].render_profile, "lumina_six_colour")
+        nebular = '[{"id":"nebular","label":"Nebular","sku":"SKU-2","width":672,"height":960,"render_profile":"six_colour_eink"}]'
+        with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": nebular}):
+            self.assertEqual(targets_from_environment()[0].render_profile, "six_colour_eink")
         invalid = '[{"id":"lumina","label":"Lumina","sku":"SKU-1","width":1600,"height":1200,"render_profile":"unknown"}]'
         with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": invalid}):
             with self.assertRaisesRegex(HanshowError, "invalid"):
                 targets_from_environment()
+
+    def test_targets_reject_shared_sku_bindings_case_insensitively(self):
+        value = json.dumps([
+            {"id": "one", "label": "One", "sku": "SHYFT-ONE", "width": 672, "height": 960},
+            {"id": "two", "label": "Two", "sku": "shyft-one", "width": 672, "height": 960},
+        ])
+        with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": value}):
+            with self.assertRaisesRegex(HanshowError, "unsafe.*more than one display"):
+                targets_from_environment()
+
+    def test_targets_accept_unique_sku_bindings(self):
+        value = json.dumps([
+            {"id": "one", "label": "One", "sku": "SHYFT-ONE", "width": 672, "height": 960},
+            {"id": "two", "label": "Two", "sku": "SHYFT-TWO", "width": 672, "height": 960},
+        ])
+        with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": value}):
+            self.assertEqual([target.id for target in targets_from_environment()], ["one", "two"])
+
+    def test_first_nebular_target_uses_confirmed_binding_and_profile(self):
+        value = json.dumps([{
+            "id": "2E-CB-52-88",
+            "label": "Nebular Pro CB",
+            "sku": "SHYFT-EAGLE-MK2-CB",
+            "width": 672,
+            "height": 960,
+            "rotation": 0,
+            "render_profile": "monochrome_eink",
+        }])
+        with patch.dict(os.environ, {"SHYFT_ESL_TARGETS": value}):
+            target = targets_from_environment()[0]
+        self.assertEqual(target.id, "2E-CB-52-88")
+        self.assertEqual(target.sku, "SHYFT-EAGLE-MK2-CB")
+        self.assertEqual((target.width, target.height, target.rotation), (672, 960, 0))
+        self.assertEqual(target.render_profile, "monochrome_eink")
 
 
 if __name__ == "__main__":

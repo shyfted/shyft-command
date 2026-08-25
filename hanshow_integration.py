@@ -84,6 +84,7 @@ def targets_from_environment() -> list[PushTarget]:
 
     targets = []
     seen = set()
+    seen_skus = set()
     for value in values:
         try:
             target = PushTarget(
@@ -103,12 +104,18 @@ def targets_from_environment() -> list[PushTarget]:
             or not target.sku
             or target.width <= 0
             or target.height <= 0
-            or target.render_profile not in {"monochrome_eink", "lumina_six_colour"}
+            or target.render_profile not in {"monochrome_eink", "lumina_six_colour", "six_colour_eink"}
         ):
             raise HanshowError("ESL target configuration is invalid")
         if target.id in seen:
             raise HanshowError("ESL target identifiers must be unique")
+        sku_key = target.sku.casefold()
+        if sku_key in seen_skus:
+            raise HanshowError(
+                f"ESL target configuration is unsafe: article SKU {target.sku} is assigned to more than one display"
+            )
         seen.add(target.id)
+        seen_skus.add(sku_key)
         targets.append(target)
     return targets
 

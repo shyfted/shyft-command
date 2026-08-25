@@ -1,4 +1,5 @@
 import os
+import tempfile
 import unittest
 from io import BytesIO
 from unittest.mock import patch
@@ -44,12 +45,12 @@ class EslRouteTests(unittest.TestCase):
         self.assertNotIn(b"SKU-1", response.data)
         self.assertNotIn(b"Hanshow", response.data)
 
-    def test_esl_page_exposes_only_two_approved_luminas(self):
+    def test_esl_page_exposes_supported_lumina_and_nebular_profiles(self):
         targets = [
             self.target,
             PushTarget("lumina-b", "Lab Lumina C0", "SKU-2", 1600, 1200),
             PushTarget("nebular", "Lab Nebular", "SKU-3", 672, 960),
-            PushTarget("extra", "Extra Lumina", "SKU-4", 1600, 1200),
+            PushTarget("unsupported", "Odd Size Device", "SKU-4", 800, 480),
         ]
         with (
             patch.object(command, "current_user", return_value=self.user),
@@ -62,9 +63,78 @@ class EslRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Showroom Display 1", response.data)
         self.assertIn(b"Showroom Display 2", response.data)
-        self.assertNotIn(b"Showroom Display 3", response.data)
-        self.assertNotIn(b"Lab Nebular", response.data)
-        self.assertNotIn(b"Extra Lumina", response.data)
+        self.assertIn(b"Showroom Display 3", response.data)
+        self.assertIn(b"9.7&quot; Nebular Pro", response.data)
+        self.assertNotIn(b"Showroom Display 4", response.data)
+        self.assertNotIn(b"Odd Size Device", response.data)
+
+    def test_nebular_workspace_reports_9_7_inch_profile(self):
+        target = PushTarget("nebular-a", "Nebular A", "SKU-N1", 672, 960)
+        workspace = command.esl_target_workspace(target, [])
+        self.assertEqual(workspace["model"], '9.7" Nebular Pro')
+        self.assertEqual((workspace["width"], workspace["height"]), (672, 960))
+
+    def test_compatible_media_is_accepted_for_lumina_and_nebular(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "source.png")
+            Image.new("RGB", (1200, 1200), "white").save(path)
+            nebular = PushTarget("nebular", "Nebular", "SKU-N", 672, 960)
+            with (
+                patch.object(command, "existing_source_path", return_value=path),
+                patch.object(command, "get_media_catalog", return_value={}),
+            ):
+                self.assertTrue(command.esl_media_compatibility("source.png", self.target)["compatible"])
+                self.assertTrue(command.esl_media_compatibility("source.png", nebular)["compatible"])
+
+    def test_incompatible_aspect_ratio_and_wrong_family_are_blocked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "banner.png")
+            Image.new("RGB", (4000, 200), "white").save(path)
+            with (
+                patch.object(command, "existing_source_path", return_value=path),
+                patch.object(command, "get_media_catalog", return_value={}),
+            ):
+                result = command.esl_media_compatibility("banner.png", self.target)
+            self.assertFalse(result["compatible"])
+            self.assertIn("aspect ratio", result["reason"])
+
+            with (
+                patch.object(command, "existing_source_path", return_value=path),
+                patch.object(command, "get_media_catalog", return_value={
+                    "banner.png": {"esl_profiles": ["nebular_9_7"]}
+                }),
+            ):
+                result = command.esl_media_compatibility("banner.png", self.target)
+            self.assertFalse(result["compatible"])
+            self.assertIn("different display family", result["reason"])
+
+    def test_corrupt_media_is_blocked(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "broken.png")
+            with open(path, "wb") as output:
+                output.write(b"not-an-image")
+            with (
+                patch.object(command, "existing_source_path", return_value=path),
+                patch.object(command, "get_media_catalog", return_value={}),
+            ):
+                result = command.esl_media_compatibility("broken.png", self.target)
+        self.assertFalse(result["compatible"])
+        self.assertIn("corrupt or unreadable", result["reason"])
+
+    def test_final_payload_gate_accepts_exact_lumina_and_nebular_pngs(self):
+        for target in (
+            self.target,
+            PushTarget("nebular", "Nebular", "SKU-N", 672, 960),
+        ):
+            payload = BytesIO()
+            Image.new("1", (target.width, target.height), 1).save(payload, "PNG")
+            command.validate_rendered_esl_payload(payload.getvalue(), target)
+
+    def test_final_payload_gate_rejects_wrong_dimensions(self):
+        payload = BytesIO()
+        Image.new("1", (672, 960), 1).save(payload, "PNG")
+        with self.assertRaisesRegex(ValueError, "invalid"):
+            command.validate_rendered_esl_payload(payload.getvalue(), self.target)
 
     def test_latest_accepted_push_becomes_live_for_only_its_target(self):
         second = PushTarget("lumina-b", "Lab Lumina C0", "SKU-2", 1600, 1200)
@@ -138,7 +208,7 @@ class EslRouteTests(unittest.TestCase):
     def test_display_workspace_has_device_context_live_staged_preview_and_back_navigation(self):
         file = {
             "name": "candidate.png", "thumb_url": "/thumb", "normalised_url": "/ready",
-            "original_url": "/original", "lcd_url": "/lcd", "eink_url": "/eink",
+            "original_name": "candidate.pdf", "original_url": "/original.pdf", "lcd_url": "/lcd", "eink_url": "/eink",
         }
         live_file = {
             "name": "live.png", "thumb_url": "/live-thumb", "normalised_url": "/live-ready",
@@ -155,6 +225,7 @@ class EslRouteTests(unittest.TestCase):
             patch.object(command, "device_cards", return_value=[]),
             patch.object(command, "get_push_jobs", return_value=jobs),
             patch.object(command, "get_esl_staged_asset", return_value="candidate.png"),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
         ):
             response = self.client.get("/esl/lumina-a")
         self.assertEqual(response.status_code, 200)
@@ -166,7 +237,7 @@ class EslRouteTests(unittest.TestCase):
         self.assertIn(b"STAGED S-ROOM 1", response.data)
         self.assertIn(b"onclick=\"openPreview(this)\"", response.data)
         self.assertIn(b"data-staged-thumbnail", response.data)
-        self.assertEqual(response.data.count(b'class="eink">Stage</button>'), 2)
+        self.assertEqual(response.data.count(b'>Stage</button>'), 2)
         self.assertEqual(response.data.count(b'<span class="enlarge-hint">click to enlarge</span>'), 2)
         self.assertNotIn(b"Stage for Showroom Display", response.data)
         self.assertNotIn(b"Stage selected media", response.data)
@@ -174,10 +245,19 @@ class EslRouteTests(unittest.TestCase):
         self.assertIn(b'<section class="device-shell">', response.data)
         self.assertIn(b'<div class="device-actions">', response.data)
         self.assertIn(b'onclick="previewStagedEsl()"', response.data)
-        self.assertIn(b'onclick="openPushConfirmation()"', response.data)
+        self.assertIn(b'onclick="pushStagedEsl()"', response.data)
         self.assertIn(b"Push to Showroom Display 1?", response.data)
         self.assertIn(b'class="confirmation-cancel" type="button"', response.data)
-        self.assertRegex(response.get_data(as_text=True), r'<button class="push"\s*>PUSH</button>')
+        self.assertIn(b"Final rendered preview for Showroom Display 1", response.data)
+        self.assertIn(b'data-original-name="candidate.pdf"', response.data)
+        self.assertIn(b"Original source:", response.data)
+        self.assertIn(b"Chrome's PDF viewer", response.data)
+        self.assertIn(b"I have reviewed this preview and am happy to push the image as shown.", response.data)
+        self.assertIn(b'id="confirmationRenderMode"', response.data)
+        self.assertIn(b'onchange="updateEslRenderMode(this.value)"', response.data)
+        self.assertIn(b"B&W uses monochrome dithering", response.data)
+        self.assertIn(b'name="preview_acknowledged"', response.data)
+        self.assertIn(b'id="confirmedPushButton" class="push" disabled>PUSH</button>', response.data)
         workspace_markup = response.get_data(as_text=True).split('<section>')[-1].split('</section>')[0]
         self.assertNotIn("workspace-state-row", workspace_markup)
         live_panel = response.get_data(as_text=True).split('<aside class="live-panel">', 1)[1].split("</aside>", 1)[0]
@@ -193,7 +273,8 @@ class EslRouteTests(unittest.TestCase):
             patch.object(command, "get_esl_staged_asset", return_value=None),
         ):
             response = self.client.get("/esl/lumina-a")
-        self.assertIn(b'class="push" type="button" onclick="openPushConfirmation()" disabled>PUSH</button>', response.data)
+        self.assertIn(b'onclick="pushStagedEsl()"', response.data)
+        self.assertIn(b'disabled>PUSH</button>', response.data)
 
     def test_staging_another_asset_replaces_only_that_displays_staged_state(self):
         with (
@@ -227,6 +308,9 @@ class EslRouteTests(unittest.TestCase):
             patch.object(command, "current_user", return_value=self.user),
             patch.object(command, "targets_from_environment", return_value=[self.target]),
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
+            patch.object(command, "render_for_screen", return_value=(BytesIO(b"rendered"), "image/png", "png")),
+            patch.object(command, "validate_rendered_esl_payload"),
             patch.object(command, "set_esl_staged_asset") as stage,
         ):
             response = self.client.post(
@@ -236,6 +320,43 @@ class EslRouteTests(unittest.TestCase):
             )
         self.assertEqual(response.location, "/esl/lumina-a")
         stage.assert_called_once_with("lumina-a", "candidate.png")
+
+    def test_server_side_stage_blocks_incompatible_media(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": False, "reason": "Wrong family."}),
+            patch.object(command, "render_for_screen") as render,
+            patch.object(command, "set_esl_staged_asset") as stage,
+        ):
+            response = self.client.post(
+                "/esl/lumina-a/stage",
+                data={"csrf_token": "csrf", "file": "candidate.png"},
+                follow_redirects=True,
+            )
+        self.assertIn(b"This media cannot be staged", response.data)
+        render.assert_not_called()
+        stage.assert_not_called()
+
+    def test_workspace_marks_incompatible_media_and_disables_stage(self):
+        file = {
+            "name": "wrong.png", "thumb_url": "/thumb", "normalised_url": "/ready",
+            "original_url": "/original", "lcd_url": "/lcd", "eink_url": "/eink",
+        }
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "list_uploads", return_value=[file]),
+            patch.object(command, "device_cards", return_value=[]),
+            patch.object(command, "get_push_jobs", return_value=[]),
+            patch.object(command, "get_esl_staged_asset", return_value=None),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": False, "reason": "Wrong family."}),
+        ):
+            response = self.client.get("/esl/lumina-a")
+        self.assertIn(b"is-incompatible", response.data)
+        self.assertIn(b"Wrong family.", response.data)
+        self.assertRegex(response.get_data(as_text=True), r'<button class="eink" disabled')
 
     def test_navigation_orders_vehicle_hangers_next_to_devices_and_renames_media(self):
         with (
@@ -291,6 +412,120 @@ class EslRouteTests(unittest.TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.location, "/esl")
         hide.assert_called_once_with("job-1")
+        submit.assert_not_called()
+
+    def test_activity_delete_returns_to_individual_workspace(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "hide_push_job_from_history", return_value=True) as hide,
+            patch.object(command, "submit_esl_push") as submit,
+        ):
+            response = self.client.post(
+                "/esl/activity/job-1/delete",
+                data={"csrf_token": "csrf", "next": "/esl/lumina-a"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl/lumina-a")
+        hide.assert_called_once_with("job-1")
+        submit.assert_not_called()
+
+    def test_hidden_activity_is_removed_from_main_and_individual_views(self):
+        jobs = [{
+            "id": "hidden", "asset": "hidden-activity.png", "status": "failed",
+            "status_label": "Failed", "created_at": "2026-08-25T00:00:00Z",
+            "targets": [{"id": "lumina-a", "label": "Showroom Display 1"}],
+            "events": [], "history_deleted_at": "2026-08-25T00:01:00Z",
+        }]
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "list_uploads", return_value=[]),
+            patch.object(command, "device_cards", return_value=[]),
+            patch.object(command, "get_push_jobs", return_value=jobs),
+            patch.object(command, "get_esl_staged_asset", return_value=None),
+        ):
+            main = self.client.get("/esl")
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "list_uploads", return_value=[]),
+            patch.object(command, "device_cards", return_value=[]),
+            patch.object(command, "get_push_jobs", return_value=jobs),
+            patch.object(command, "get_esl_staged_asset", return_value=None),
+        ):
+            individual = self.client.get("/esl/lumina-a")
+        self.assertNotIn(b"hidden-activity.png", main.data)
+        self.assertNotIn(b"hidden-activity.png", individual.data)
+
+    def test_individual_activity_rows_have_delete_controls(self):
+        jobs = [{
+            "id": "job-1", "asset": "vehicle.png", "status": "accepted",
+            "status_label": "Update sent", "created_at": "2026-08-25T00:00:00Z",
+            "targets": [{"id": "lumina-a", "label": "Showroom Display 1"}], "events": [],
+        }]
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "list_uploads", return_value=[]),
+            patch.object(command, "device_cards", return_value=[]),
+            patch.object(command, "get_push_jobs", return_value=jobs),
+            patch.object(command, "get_esl_staged_asset", return_value=None),
+        ):
+            response = self.client.get("/esl/lumina-a")
+        self.assertIn(b'action="/esl/activity/job-1/delete"', response.data)
+        self.assertIn(b'name="next" value="/esl/lumina-a"', response.data)
+        self.assertIn(b'>Delete</button>', response.data)
+        self.assertIn(b'id="activitySelectAll"', response.data)
+        self.assertIn(b'id="activityBulkDelete"', response.data)
+        self.assertIn(b'class="job-check" form="activityBulkDeleteForm"', response.data)
+
+    def test_bulk_activity_delete_returns_to_individual_workspace(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "hide_push_jobs_from_history", return_value=2) as hide,
+        ):
+            response = self.client.post(
+                "/esl/activity/delete",
+                data={"csrf_token": "csrf", "job_ids": ["job-1", "job-2"], "next": "/esl/lumina-a"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl/lumina-a")
+        hide.assert_called_once_with(["job-1", "job-2"])
+
+    def test_media_deletion_stays_in_media_and_never_pushes(self):
+        for filename in ("first.png", "second.png", "third.png"):
+            with (
+                patch.object(command, "current_user", return_value=self.user),
+                patch.object(command, "get_media_catalog", return_value={filename: {"original": filename}}),
+                patch.object(command, "save_media_catalog"),
+                patch.object(command, "clear_file_references", return_value=[]),
+                patch("os.path.exists", return_value=True),
+                patch("os.remove") as remove,
+                patch.object(command, "submit_esl_push") as submit,
+            ):
+                response = self.client.post(
+                    "/delete",
+                    data={"csrf_token": "csrf", "file": filename, "next": "/media"},
+                    follow_redirects=False,
+                )
+            self.assertEqual(response.location, "/media")
+            self.assertTrue(remove.called)
+            submit.assert_not_called()
+
+    def test_activity_deletion_does_not_delete_media(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "hide_push_job_from_history", return_value=True),
+            patch("os.remove") as remove,
+            patch.object(command, "submit_esl_push") as submit,
+        ):
+            response = self.client.post(
+                "/esl/activity/job-1/delete",
+                data={"csrf_token": "csrf", "next": "/esl"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl")
+        remove.assert_not_called()
         submit.assert_not_called()
 
     def test_activity_bulk_delete_hides_only_selected_history_entries(self):
@@ -358,6 +593,7 @@ class EslRouteTests(unittest.TestCase):
         }
         with (
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
             patch.object(command, "existing_source_path", return_value="source.png"),
             patch.object(command, "load_source_image", return_value=source),
         ):
@@ -372,6 +608,86 @@ class EslRouteTests(unittest.TestCase):
         self.assertEqual(extension, "png")
         actual_colours = set(rendered.convert("RGB").getdata())
         self.assertEqual(actual_colours, set(colours))
+
+    def test_nebular_six_colour_profile_uses_target_resolution_and_palette(self):
+        source = Image.new("RGB", (1200, 800), (0, 255, 0))
+        device = {
+            "screens": {
+                "eink": {
+                    "type": "eink",
+                    "width": 672,
+                    "height": 960,
+                    "render_profile": "six_colour_eink",
+                }
+            }
+        }
+        with (
+            patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "existing_source_path", return_value="source.png"),
+            patch.object(command, "load_source_image", return_value=source),
+        ):
+            output, mimetype, extension = command.render_for_screen("source.png", "eink", device)
+        rendered = Image.open(BytesIO(output.getvalue()))
+        self.assertEqual(rendered.size, (672, 960))
+        self.assertEqual(rendered.mode, "P")
+        self.assertEqual(mimetype, "image/png")
+        self.assertEqual(extension, "png")
+        self.assertLessEqual(set(rendered.convert("RGB").getdata()), set(command.SIX_COLOUR_EINK_PALETTE))
+
+    def test_operator_can_choose_bw_or_six_colour_rendering_for_same_target(self):
+        target = PushTarget("nebular", "Nebular", "SKU-N", 672, 960, render_profile="six_colour_eink")
+        bw = command.esl_render_device(target, "bw")["screens"]["eink"]
+        colour = command.esl_render_device(target, "six_colour")["screens"]["eink"]
+        self.assertEqual((bw["width"], bw["height"]), (672, 960))
+        self.assertEqual((colour["width"], colour["height"]), (672, 960))
+        self.assertEqual(bw["render_profile"], "monochrome_eink")
+        self.assertEqual(colour["render_profile"], "six_colour_eink")
+        with self.assertRaisesRegex(ValueError, "Unsupported"):
+            command.esl_render_device(target, "unapproved")
+
+    def test_preview_acknowledgement_is_required_only_above_six_source_colours(self):
+        target = PushTarget("nebular", "Nebular", "SKU-N", 672, 960, render_profile="six_colour_eink")
+        six_colours = Image.new("RGB", (6, 1))
+        for x, colour in enumerate(command.SIX_COLOUR_EINK_PALETTE):
+            six_colours.putpixel((x, 0), colour)
+        seven_colours = Image.new("RGB", (7, 1))
+        for x in range(7):
+            seven_colours.putpixel((x, 0), (x, x, x))
+        with (
+            patch.object(command, "existing_source_path", return_value="source.png"),
+            patch.object(command, "load_source_image", return_value=six_colours),
+        ):
+            self.assertFalse(command.esl_media_requires_preview_acknowledgement("source.png", target))
+        with (
+            patch.object(command, "existing_source_path", return_value="source.png"),
+            patch.object(command, "load_source_image", return_value=seven_colours),
+        ):
+            self.assertTrue(command.esl_media_requires_preview_acknowledgement("source.png", target))
+        monochrome = PushTarget("mono", "Mono", "SKU-M", 672, 960, render_profile="monochrome_eink")
+        self.assertFalse(command.esl_media_requires_preview_acknowledgement("source.png", monochrome))
+
+    def test_material_colour_detection_ignores_jpeg_noise_but_flags_photos(self):
+        target = PushTarget("nebular", "Nebular", "SKU-N", 672, 960, render_profile="six_colour_eink")
+        with tempfile.TemporaryDirectory() as directory:
+            artwork_path = os.path.join(directory, "artwork.jpg")
+            artwork = Image.new("RGB", (300, 300), "black")
+            for x in range(100, 200):
+                for y in range(300):
+                    artwork.putpixel((x, y), (255, 255, 255))
+            for x in range(200, 300):
+                for y in range(300):
+                    artwork.putpixel((x, y), (0, 0, 255))
+            artwork.save(artwork_path, "JPEG", quality=85)
+            gradient_path = os.path.join(directory, "photo.jpg")
+            gradient = Image.new("RGB", (256, 256))
+            for x in range(256):
+                for y in range(256):
+                    gradient.putpixel((x, y), (x, y, (x + y) // 2))
+            gradient.save(gradient_path, "JPEG", quality=90)
+            with patch.object(command, "existing_source_path", return_value=artwork_path):
+                self.assertFalse(command.esl_media_requires_preview_acknowledgement("artwork.jpg", target))
+            with patch.object(command, "existing_source_path", return_value=gradient_path):
+                self.assertTrue(command.esl_media_requires_preview_acknowledgement("photo.jpg", target))
 
     def test_monochrome_profile_remains_available(self):
         source = Image.new("RGB", (1600, 1200), (255, 0, 0))
@@ -433,6 +749,7 @@ class EslRouteTests(unittest.TestCase):
         with (
             patch.object(command, "current_user", return_value=self.user),
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
             patch.object(command, "targets_from_environment", return_value=[self.target]),
             patch.object(command, "render_for_screen", return_value=(rendered, "image/png", "png")) as render,
         ):
@@ -454,16 +771,18 @@ class EslRouteTests(unittest.TestCase):
         with (
             patch.object(command, "current_user", return_value=self.user),
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
             patch.object(command, "targets_from_environment", return_value=[self.target]),
             patch.object(command, "record_push_job") as record,
             patch.object(command, "update_push_job") as update,
             patch.object(command, "render_for_screen", return_value=(BytesIO(b"rendered-png"), "image/png", "png")) as render,
+            patch.object(command, "validate_rendered_esl_payload"),
             patch.object(command, "submit_esl_push", return_value=result) as submit,
             patch.object(command, "clear_esl_staged_asset") as clear_staged,
         ):
             response = self.client.post(
                 "/esl/push",
-                data={"csrf_token": "csrf", "file": "vehicle.png", "target_id": "lumina-a"},
+                data={"csrf_token": "csrf", "file": "vehicle.png", "target_id": "lumina-a", "render_mode": "bw"},
                 follow_redirects=False,
             )
         self.assertEqual(response.status_code, 302)
@@ -471,6 +790,7 @@ class EslRouteTests(unittest.TestCase):
         self.assertEqual(record.call_args.args[0]["targets"], [{"id": "lumina-a", "label": "Showroom Display 1"}])
         render_device = render.call_args.args[2]
         self.assertEqual(render_device["screens"]["eink"]["width"], 1600)
+        self.assertEqual(render_device["screens"]["eink"]["render_profile"], "monochrome_eink")
         submit.assert_called_once()
         submitted_target = submit.call_args.args[1][0]
         self.assertEqual(submit.call_args.args[0], b"rendered-png")
@@ -487,16 +807,18 @@ class EslRouteTests(unittest.TestCase):
         with (
             patch.object(command, "current_user", return_value=self.user),
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
             patch.object(command, "targets_from_environment", return_value=[self.target]),
             patch.object(command, "record_push_job"),
             patch.object(command, "update_push_job") as update,
             patch.object(command, "render_for_screen", return_value=(BytesIO(b"rendered-png"), "image/png", "png")),
+            patch.object(command, "validate_rendered_esl_payload"),
             patch.object(command, "submit_esl_push", side_effect=command.HanshowError("resultCode=9999 provider detail")),
             patch.object(command, "clear_esl_staged_asset") as clear_staged,
         ):
             response = self.client.post(
                 "/esl/push",
-                data={"csrf_token": "csrf", "file": "vehicle.png", "target_id": "lumina-a"},
+                data={"csrf_token": "csrf", "file": "vehicle.png", "target_id": "lumina-a", "preview_acknowledged": "yes"},
                 follow_redirects=False,
             )
         self.assertEqual(response.status_code, 302)
@@ -506,28 +828,89 @@ class EslRouteTests(unittest.TestCase):
         self.assertNotIn("resultCode", final_update["error"])
         clear_staged.assert_not_called()
 
+    def test_final_payload_validation_blocks_submit_when_route_is_bypassed(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
+            patch.object(command, "targets_from_environment", return_value=[self.target]),
+            patch.object(command, "record_push_job"),
+            patch.object(command, "update_push_job") as update,
+            patch.object(command, "render_for_screen", return_value=(BytesIO(b"not-a-valid-png"), "image/png", "png")),
+            patch.object(command, "submit_esl_push") as submit,
+        ):
+            response = self.client.post(
+                "/esl/push",
+                data={"csrf_token": "csrf", "file": "vehicle.png", "target_id": "lumina-a", "preview_acknowledged": "yes"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl/lumina-a")
+        self.assertEqual(update.call_args_list[-1].kwargs["status"], "failed")
+        submit.assert_not_called()
+
     def test_workspace_push_uses_only_active_targets_server_side_staged_asset(self):
         result = {"batch_no": "B2", "physical_display_confirmed": False}
         with (
             patch.object(command, "current_user", return_value=self.user),
             patch.object(command, "get_esl_staged_asset", return_value="staged.png"),
             patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
             patch.object(command, "targets_from_environment", return_value=[self.target]),
             patch.object(command, "record_push_job") as record,
             patch.object(command, "update_push_job"),
             patch.object(command, "render_for_screen", return_value=(BytesIO(b"rendered"), "image/png", "png")),
+            patch.object(command, "validate_rendered_esl_payload"),
             patch.object(command, "submit_esl_push", return_value=result),
             patch.object(command, "clear_esl_staged_asset") as clear,
         ):
             response = self.client.post(
                 "/esl/lumina-a/push",
-                data={"csrf_token": "csrf", "file": "wrong-target.png", "target_id": "other"},
+                data={"csrf_token": "csrf", "file": "wrong-target.png", "target_id": "other", "preview_acknowledged": "yes"},
                 follow_redirects=False,
             )
         self.assertEqual(response.location, "/esl/lumina-a")
         self.assertEqual(record.call_args.args[0]["asset"], "staged.png")
         self.assertEqual(record.call_args.args[0]["targets"][0]["id"], "lumina-a")
         clear.assert_called_once_with("lumina-a", "staged.png")
+
+    def test_push_requires_rendered_preview_acknowledgement_server_side(self):
+        colour_target = PushTarget(
+            "lumina-a", "Lab Lumina BF", "SKU-1", 1600, 1200,
+            render_profile="six_colour_eink",
+        )
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "get_esl_staged_asset", return_value="photo.png"),
+            patch.object(command, "upload_exists", return_value=True),
+            patch.object(command, "targets_from_environment", return_value=[colour_target]),
+            patch.object(command, "esl_media_compatibility", return_value={"compatible": True, "reason": "Ready."}),
+            patch.object(command, "esl_media_requires_preview_acknowledgement", return_value=True),
+            patch.object(command, "record_push_job") as record,
+            patch.object(command, "submit_esl_push") as submit,
+        ):
+            response = self.client.post(
+                "/esl/lumina-a/push",
+                data={"csrf_token": "csrf"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl/lumina-a")
+        record.assert_not_called()
+        submit.assert_not_called()
+
+    def test_push_rejects_unapproved_render_treatment_server_side(self):
+        with (
+            patch.object(command, "current_user", return_value=self.user),
+            patch.object(command, "record_push_job") as record,
+            patch.object(command, "submit_esl_push") as submit,
+        ):
+            response = self.client.post(
+                "/esl/lumina-a/push",
+                data={"csrf_token": "csrf", "render_mode": "full_colour"},
+                follow_redirects=False,
+            )
+        self.assertEqual(response.location, "/esl/lumina-a")
+        record.assert_not_called()
+        submit.assert_not_called()
 
 
 if __name__ == "__main__":
