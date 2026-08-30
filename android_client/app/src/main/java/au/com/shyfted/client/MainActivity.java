@@ -58,6 +58,7 @@ public final class MainActivity extends Activity {
     private CmsEndpoints endpoints;
     private DeviceConfig deviceConfig;
     private ShyftedDeviceClient deviceClient;
+    private Esp32Client esp32Client;
     private PeteyEinkServiceProbe peteyEinkServiceProbe;
     private PresenceMonitor presenceMonitor;
     private LcdPowerController lcdPowerController;
@@ -168,6 +169,8 @@ public final class MainActivity extends Activity {
         handleEpdProbeIntent(getIntent());
         if (!isEpdProbeOnly(getIntent())) {
             deviceClient.start();
+            esp32Client = new Esp32Client(deviceClient::updateEsp32Ping);
+            esp32Client.ping();
         } else {
             Log.i(ShyftedDeviceClient.TAG, "EPD_VENDOR_PROBE probe-only launch: CMS client start skipped");
         }
@@ -194,6 +197,10 @@ public final class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (esp32Client != null) {
+            esp32Client.stop();
+            esp32Client = null;
+        }
         if (deviceClient != null) {
             deviceClient.stop();
             deviceClient = null;

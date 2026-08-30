@@ -125,6 +125,27 @@ final class ShyftedDeviceClient {
         }
     }
 
+    void updateEsp32Ping(boolean ok, String response, String error, long latencyMs) {
+        try {
+            synchronized (deviceSpecLock) {
+                JSONObject esp32 = new JSONObject();
+                esp32.put("ip", "192.168.0.112");
+                esp32.put("ping_ok", ok);
+                esp32.put("ping_response", response == null ? JSONObject.NULL : response);
+                esp32.put("ping_error", error == null ? JSONObject.NULL : error);
+                esp32.put("ping_latency_ms", latencyMs);
+                esp32.put("checked_at_ms", System.currentTimeMillis());
+                deviceSpec.put("esp32", esp32);
+            }
+            ScheduledExecutorService currentExecutor = executor;
+            if (currentExecutor != null && !currentExecutor.isShutdown()) {
+                currentExecutor.execute(this::sendHeartbeat);
+            }
+        } catch (JSONException e) {
+            Log.w(TAG, "Unable to update ESP32 ping state", e);
+        }
+    }
+
     private void sendHeartbeat() {
         try {
             String payload = heartbeatPayloadForLogs();

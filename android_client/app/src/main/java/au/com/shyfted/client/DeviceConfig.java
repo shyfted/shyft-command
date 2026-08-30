@@ -53,7 +53,21 @@ final class DeviceConfig {
         config = config.withPreferences(context);
         config = config.withPropertiesFile(context);
         config = config.withIntentOverrides(intent);
+        if (!"defaults".equals(config.source)) {
+            config.persistPreferences(context);
+        }
         return config;
+    }
+
+    private void persistPreferences(Context context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit()
+                .putString(KEY_DEVICE_NAME, deviceName)
+                .putString(KEY_DEVICE_ID, deviceId)
+                .putString(KEY_CMS_URL, cmsUrl)
+                .putBoolean(KEY_PRESENCE_LCD_POWER_ENABLED, presenceLcdPowerEnabled)
+                .putLong(KEY_PRESENCE_STABLE_LOW_TIMEOUT_MS, presenceStableLowTimeoutMs)
+                .commit();
     }
 
     File externalConfigFile(Context context) {
